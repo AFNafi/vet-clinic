@@ -27,19 +27,19 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## ERD and database design
 
-- [ ] Create a Mermaid ER diagram.
-- [ ] Include a short explanation of the purpose of every table.
-- [ ] Explain normalization through Third Normal Form (3NF).
-- [ ] Define a primary key for every table.
-- [ ] Define foreign keys for every relationship.
-- [ ] Use `NOT NULL` constraints where appropriate.
-- [ ] Use `UNIQUE` constraints where appropriate.
-- [ ] Use `CHECK` constraints where appropriate.
-- [ ] Use `DEFAULT` constraints where appropriate.
-- [ ] Use `GENERATED ALWAYS AS IDENTITY` for identity primary keys.
-- [ ] Create indexes for foreign-key columns.
-- [ ] Create indexes for commonly searched fields.
-- [ ] Include at least one many-to-many relationship: appointments to services through `APPOINTMENT_SERVICES`.
+- [x] Create a Mermaid ER diagram.
+- [x] Include a short explanation of the purpose of every table.
+- [x] Explain normalization through Third Normal Form (3NF).
+- [x] Define a primary key for every table.
+- [x] Define foreign keys for every relationship.
+- [x] Use `NOT NULL` constraints where appropriate.
+- [x] Use `UNIQUE` constraints where appropriate.
+- [x] Use `CHECK` constraints where appropriate.
+- [x] Use `DEFAULT` constraints where appropriate.
+- [x] Use `GENERATED ALWAYS AS IDENTITY` for identity primary keys.
+- [x] Create indexes for foreign-key columns.
+- [x] Create indexes for commonly searched fields.
+- [x] Include at least one many-to-many relationship: appointments to services through `APPOINTMENT_SERVICES`.
 
 ## Required tables and DDL
 
@@ -151,9 +151,9 @@ Use this checklist to track every project deliverable and grading criterion.
 - [ ] Create `sql/run_all.sql`.
 - [ ] Keep `docs/requirements.md`.
 - [ ] Create `docs/checklist.md`.
-- [ ] Create `docs/design.md`.
-- [ ] Create `docs/erd.md`.
-- [ ] Create `docs/normalization.md`.
+- [x] Create `docs/design.md`.
+- [x] Create `docs/erd.md`.
+- [x] Create `docs/normalization.md`.
 - [ ] Create `docs/decisions.md`.
 - [ ] Create `docs/backup.md`.
 - [ ] Create `README.md`.
