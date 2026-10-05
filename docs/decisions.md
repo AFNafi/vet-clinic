@@ -92,7 +92,13 @@ invoices separately because those lists are re-rendered by their own views and f
 The dashboard keeps its existing navigation, API requests, filters, search, and booking flow. Its
 styles use a clearer visual hierarchy, more responsive layouts, restrained motion, and reduced
 motion support. The booking action remains visible on small screens, where the previous layout
-hid it.
+hid it. A later visual pass added a small dialog entrance transition and sticky table headings to
+make long lists easier to scan.
+
+The visual direction was informed by the task-focused, clinician-centered presentation on
+[Shepherd](https://www.shepherd.vet/) and [Vetspire](https://www.vetspire.ai/), checked on
+2026-10-06. These were used only as high-level references for clarity and workflow readability;
+their branding, assets, and product UI were not copied.
 
 ## 2026-10-06: Booking dates and times are validated as real calendar values
 
