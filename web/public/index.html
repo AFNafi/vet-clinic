@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A fictional veterinary clinic dashboard demo.">
+    <title>Vet Clinic | Practice dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="main-navigation" aria-label="Main navigation">
+        <a class="brand" href="#dashboard-view" data-view="dashboard">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <span>Vetwise<span>Clinic</span></span>
+        </a>
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="dashboard" aria-current="page"><span aria-hidden="true">⌂</span> Dashboard</button>
+          <button class="nav-item" data-view="patients"><span aria-hidden="true">♧</span> Patients</button>
+          <button class="nav-item" data-view="appointments"><span aria-hidden="true">◷</span> Appointments</button>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="staff-avatar" aria-hidden="true">VC</div>
+          <div><strong>Clinic team</strong><small>Demo workspace</small></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <button class="menu-button" id="menu-button" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="main-navigation">☰</button>
+          <div>
+            <p class="eyebrow" id="today-label"></p>
+            <h1 id="page-title">Good morning, clinic team.</h1>
+          </div>
+          <div class="topbar-actions">
+            <span class="demo-pill">Fictional demo data</span>
+            <button class="primary-button" id="new-appointment-button" type="button">+ New appointment</button>
+          </div>
+        </header>
+
+        <p class="load-error" id="load-error" role="alert" hidden></p>
+
+        <section class="view active" id="dashboard-view" aria-labelledby="page-title">
+          <div class="summary-grid" id="summary-grid" aria-live="polite"></div>
+          <div class="dashboard-grid">
+            <section class="panel appointments-panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Today & next</p><h2>Upcoming appointments</h2></div>
+                <button class="text-button" data-view-target="appointments">See all</button>
+              </div>
+              <div id="upcoming-list" class="schedule-list"></div>
+            </section>
+            <section class="alerts-column">
+              <div class="welcome-card">
+                <span class="welcome-icon" aria-hidden="true">♥</span>
+                <p class="eyebrow">Practice snapshot</p>
+                <h2>Small details make healthier pets.</h2>
+                <p>This simple dashboard is ready for a future Express-to-Oracle connection.</p>
+              </div>
+              <div id="alert-list" class="alert-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="patients-view" aria-labelledby="patients-heading">
+          <div class="section-heading">
+            <div><p class="eyebrow">Patient records</p><h2 id="patients-heading">Patients</h2><p>Fictional records for UI review.</p></div>
+            <label class="search-field"><span aria-hidden="true">⌕</span><input id="patient-search" type="search" aria-label="Search patients by name, owner, species, or breed" placeholder="Search patient or owner"></label>
+          </div>
+          <section class="panel table-panel">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Patient</th><th>Species & breed</th><th>Owner</th><th>Last visit</th><th>Status</th></tr></thead>
+              <tbody id="patients-table-body"></tbody>
+            </table></div>
+          </section>
+        </section>
+
+        <section class="view" id="appointments-view" aria-labelledby="appointments-heading">
+          <div class="section-heading">
+            <div><p class="eyebrow">Clinic schedule</p><h2 id="appointments-heading">Appointments</h2><p>Review scheduled and completed fictional visits.</p></div>
+            <label class="select-field">Show <select id="appointment-filter"><option value="all">All appointments</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option></select></label>
+          </div>
+          <section class="panel table-panel">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Date & time</th><th>Patient</th><th>Veterinarian</th><th>Reason</th><th>Status</th></tr></thead>
+              <tbody id="appointments-table-body"></tbody>
+            </table></div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
