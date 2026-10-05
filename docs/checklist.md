@@ -99,20 +99,20 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## PL/SQL
 
-- [ ] Create the `vet_clinic_pkg` package.
-- [ ] Add a procedure to book an appointment.
-- [ ] Add a function to calculate an invoice total.
-- [ ] Add a procedure to register a vaccination.
-- [ ] Add a procedure that prints vaccination reminders using an explicit cursor and loop.
-- [ ] Implement proper exception handling.
-- [ ] Use `RAISE_APPLICATION_ERROR` with custom error messages.
+- [x] Create the `vet_clinic_pkg` package.
+- [x] Add a procedure to book an appointment.
+- [x] Add a function to calculate an invoice total.
+- [x] Add a procedure to register a vaccination.
+- [x] Add a procedure that prints vaccination reminders using an explicit cursor and loop.
+- [x] Implement proper exception handling.
+- [x] Use `RAISE_APPLICATION_ERROR` with custom error messages.
 
 ## Triggers
 
-- [ ] Audit appointment changes.
-- [ ] Reduce medication stock when a prescription is created.
-- [ ] Prevent medication stock from becoming negative.
-- [ ] Set a missing invoice date automatically.
+- [x] Audit appointment changes.
+- [x] Reduce medication stock when a prescription is created.
+- [x] Prevent medication stock from becoming negative.
+- [x] Set a missing invoice date automatically.
 
 ## Security and transactions
 
@@ -144,8 +144,8 @@ Use this checklist to track every project deliverable and grading criterion.
 - [x] Create `sql/02_data.sql`.
 - [x] Create `sql/03_queries.sql`.
 - [x] Create `sql/04_views.sql`.
-- [ ] Create `sql/05_package.sql`.
-- [ ] Create `sql/06_triggers.sql`.
+- [x] Create `sql/05_package.sql`.
+- [x] Create `sql/06_triggers.sql`.
 - [ ] Create `sql/07_security.sql`.
 - [ ] Create `sql/08_tests.sql`.
 - [x] Create `sql/run_all.sql`.

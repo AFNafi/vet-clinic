@@ -188,13 +188,19 @@ CREATE TABLE payments (
 );
 
 CREATE TABLE appointment_audit (
-    audit_id       NUMBER GENERATED ALWAYS AS IDENTITY,
-    appointment_id NUMBER NOT NULL,
-    action_type    VARCHAR2(10) NOT NULL,
-    old_status     VARCHAR2(20),
-    new_status     VARCHAR2(20),
-    changed_at     DATE DEFAULT SYSDATE NOT NULL,
-    changed_by     VARCHAR2(128) DEFAULT USER NOT NULL,
+    audit_id               NUMBER GENERATED ALWAYS AS IDENTITY,
+    appointment_id         NUMBER NOT NULL,
+    action_type            VARCHAR2(10) NOT NULL,
+    old_status             VARCHAR2(20),
+    new_status             VARCHAR2(20),
+    old_appointment_date   DATE,
+    new_appointment_date   DATE,
+    old_veterinarian_id    NUMBER,
+    new_veterinarian_id    NUMBER,
+    old_reason             VARCHAR2(500),
+    new_reason             VARCHAR2(500),
+    changed_at             DATE DEFAULT SYSDATE NOT NULL,
+    changed_by             VARCHAR2(128) DEFAULT USER NOT NULL,
     CONSTRAINT pk_appointment_audit PRIMARY KEY (audit_id),
     CONSTRAINT fk_audit_appt FOREIGN KEY (appointment_id)
         REFERENCES appointments (appointment_id),

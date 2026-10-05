@@ -102,6 +102,8 @@ erDiagram
         NUMBER audit_id PK
         NUMBER appointment_id FK
         VARCHAR2 action_type
+        VARCHAR2 old_status
+        VARCHAR2 new_status
         DATE changed_at
     }
 ```

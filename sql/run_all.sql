@@ -19,9 +19,13 @@ PROMPT === Running business queries ===
 PROMPT === Creating reporting views ===
 @@04_views.sql
 
+PROMPT === Creating PL/SQL package ===
+@@05_package.sql
+
+PROMPT === Creating triggers and running trigger tests ===
+@@06_triggers.sql
+
 -- Add the remaining project scripts here as they are created:
--- @@05_package.sql
--- @@06_triggers.sql
 -- @@07_security.sql
 -- @@08_tests.sql
 

@@ -185,6 +185,12 @@ Stores the history of appointment changes. It is filled by a trigger later in th
 | action_type | VARCHAR2(10) | NOT NULL, CHECK (`action_type` IN ('INSERT', 'UPDATE', 'DELETE')) |
 | old_status | VARCHAR2(20) | Optional |
 | new_status | VARCHAR2(20) | Optional |
+| old_appointment_date | DATE | Optional; appointment date before the change |
+| new_appointment_date | DATE | Optional; appointment date after the change |
+| old_veterinarian_id | NUMBER | Optional; veterinarian before the change |
+| new_veterinarian_id | NUMBER | Optional; veterinarian after the change |
+| old_reason | VARCHAR2(500) | Optional; reason before the change |
+| new_reason | VARCHAR2(500) | Optional; reason after the change |
 | changed_at | DATE | NOT NULL, DEFAULT `SYSDATE` |
 | changed_by | VARCHAR2(128) | NOT NULL, DEFAULT `USER` |
 
