@@ -18,7 +18,10 @@ button, input, select { font: inherit; }
 button { cursor: pointer; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #83b6a5; outline-offset: 3px; }
 .app-shell { min-height: 100vh; display: flex; }
-.sidebar { width: 244px; min-height: 100vh; padding: 28px 16px; background: var(--forest); color: white; display: flex; flex-direction: column; position: sticky; top: 0; }
+/* flex: 0 0 244px keeps the rail fixed, and align-self stops it stretching to the
+   full page height - without that, position: sticky never engages and the nav
+   scrolls out of view on long pages. */
+.sidebar { flex: 0 0 244px; width: 244px; height: 100vh; align-self: flex-start; overflow-y: auto; padding: 28px 16px; background: var(--forest); color: white; display: flex; flex-direction: column; position: sticky; top: 0; }
 .brand { color: white; text-decoration: none; display: flex; align-items: center; gap: 10px; font: 700 22px/1 "Fraunces", serif; padding: 0 10px 38px; }
 .brand span span { color: var(--lime); }
 .brand-mark { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; color: var(--forest); background: var(--lime); font-family: sans-serif; }
@@ -29,7 +32,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .sidebar-footer { margin-top: auto; padding: 15px 10px 0; display: flex; align-items: center; gap: 10px; color: #d5e3dc; }
 .sidebar-footer strong, .sidebar-footer small { display: block; }.sidebar-footer small { margin-top: 3px; color: #aac5ba; font-size: 12px; }
 .staff-avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #e9b680; color: var(--forest); font-size: 11px; font-weight: 700; }
-.content { width: min(1280px, 100%); padding: 34px 48px 56px; margin: 0 auto; }
+/* min-width: 0 lets this flex item shrink; otherwise the wide data tables force
+   the whole page to overflow horizontally on narrow desktop widths. */
+.content { width: min(1280px, 100%); min-width: 0; padding: 34px 48px 56px; margin: 0 auto; }
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
 .eyebrow { margin: 0 0 7px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
 h1, h2, p { margin-top: 0; } h1, h2 { font-family: "Fraunces", serif; } h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.08; margin-bottom: 0; } h2 { font-size: 24px; line-height: 1.15; margin-bottom: 0; }
@@ -44,5 +49,32 @@ h1, h2, p { margin-top: 0; } h1, h2 { font-family: "Fraunces", serif; } h1 { fon
 .load-error { margin: 0 0 20px; padding: 14px 16px; color: #7b342a; background: #fff0eb; border: 1px solid #f1c9bd; border-radius: 10px; }
 .load-error[hidden] { display: none; }
 .toast { opacity: 0; pointer-events: none; position: fixed; right: 24px; bottom: 24px; padding: 13px 16px; color: white; background: var(--ink); border-radius: 10px; box-shadow: var(--shadow); transform: translateY(12px); transition: .2s ease; }.toast.show { opacity: 1; transform: translateY(0); }
+/* Status chips used by the patients, appointments, and billing tables. */
+.status.vaccination-due, .status.unpaid { background: var(--peach); color: #955820; }
+.status.part-paid { background: var(--lime); color: #4c5a1e; }
+
+/* Clinic facts panel on the dashboard. */
+.clinic-facts { margin: 14px 0 0; display: grid; gap: 10px; }
+.clinic-facts dt { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.clinic-facts dd { margin: 3px 0 0; font-size: 14px; }
+
+/* New-appointment dialog. */
+.booking-dialog { border: 0; border-radius: 16px; padding: 0; width: min(560px, calc(100vw - 32px)); box-shadow: var(--shadow); color: var(--ink); background: var(--panel); }
+.booking-dialog::backdrop { background: rgba(24, 49, 44, .45); }
+.booking-form { padding: 24px; }
+.dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.icon-button { border: 0; border-radius: 8px; padding: 6px 8px; color: var(--muted); background: transparent; }
+.icon-button:hover { color: var(--ink); background: var(--canvas); }
+.form-error { margin: 0 0 16px; padding: 12px 14px; color: #7b342a; background: #fff0eb; border: 1px solid #f1c9bd; border-radius: 10px; font-size: 14px; }
+.form-error[hidden] { display: none; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.booking-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--ink); }
+.booking-form input, .booking-form select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--panel); font-weight: 500; }
+.booking-form input:focus-visible, .booking-form select:focus-visible { outline: 3px solid #83b6a5; outline-offset: 2px; }
+.form-wide { margin-top: 14px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.ghost-button { border: 1px solid var(--line); border-radius: 10px; padding: 12px 15px; color: var(--ink); background: var(--panel); font-weight: 700; }
+.ghost-button:hover { background: var(--canvas); }
+
 @media (max-width: 1020px) { .summary-grid { grid-template-columns: repeat(2, 1fr); }.content { padding: 28px; }.dashboard-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .sidebar { position: fixed; z-index: 2; transform: translateX(-100%); transition: transform .2s ease; box-shadow: var(--shadow); }.sidebar.open { transform: translateX(0); }.content { padding: 22px 18px 42px; }.menu-button { display: inline-block; }.topbar { align-items: flex-start; }.topbar > div:nth-child(2) { flex: 1; }.topbar-actions { display: none; }.section-heading { flex-direction: column; }.search-field, .select-field { width: 100%; }.schedule-item { grid-template-columns: 60px 1fr; }.schedule-item .chip { justify-self: start; }.summary-grid { grid-template-columns: 1fr 1fr; gap: 12px; }.stat-card { min-height: 125px; padding: 16px; }.stat-card strong { font-size: 32px; } }

@@ -4,26 +4,26 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## Project scope and tools
 
-- [ ] Build an Oracle Database system for a small veterinary clinic.
-- [ ] Use Oracle Database Free.
-- [ ] Run SQL with SQLcl.
-- [ ] Use VS Code for development.
-- [ ] Use Git for version control.
-- [ ] Use Oracle SQL syntax only.
-- [ ] Keep any optional front end limited to Node.js, Express, and Oracle node-oracledb.
-- [ ] Make the database fully rebuildable from SQL scripts.
+- [x] Build an Oracle Database system for a small veterinary clinic.
+- [x] Use Oracle Database Free.
+- [x] Run SQL with SQLcl.
+- [x] Use VS Code for development.
+- [x] Use Git for version control.
+- [x] Use Oracle SQL syntax only.
+- [x] Keep any optional front end limited to Node.js, Express, and Oracle node-oracledb.
+- [x] Make the database fully rebuildable from SQL scripts.
 
 ## Required business capabilities
 
-- [ ] Store pet-owner information accurately.
-- [ ] Store pet information accurately.
-- [ ] Record appointments between pets and veterinarians.
-- [ ] Record services performed during appointments.
-- [ ] Track medications and prescriptions.
-- [ ] Store vaccination records and identify vaccinations due soon.
-- [ ] Create invoices and record payments.
-- [ ] Produce useful business queries and reports.
-- [ ] Protect data through constraints, roles, and privileges.
+- [x] Store pet-owner information accurately.
+- [x] Store pet information accurately.
+- [x] Record appointments between pets and veterinarians.
+- [x] Record services performed during appointments.
+- [x] Track medications and prescriptions.
+- [x] Store vaccination records and identify vaccinations due soon.
+- [x] Create invoices and record payments.
+- [x] Produce useful business queries and reports.
+- [x] Protect data through constraints, roles, and privileges.
 
 ## ERD and database design
 
@@ -123,7 +123,7 @@ Use this checklist to track every project deliverable and grading criterion.
 - [x] Demonstrate `COMMIT`.
 - [x] Demonstrate `ROLLBACK`.
 - [x] Demonstrate `SAVEPOINT`.
-- [ ] Do not save passwords in the repository.
+- [x] Do not save passwords in the repository.
 
 ## Testing
 
@@ -149,40 +149,57 @@ Use this checklist to track every project deliverable and grading criterion.
 - [x] Create `sql/07_security.sql`.
 - [x] Create `sql/08_tests.sql`.
 - [x] Create `sql/run_all.sql`.
-- [ ] Keep `docs/requirements.md`.
-- [ ] Create `docs/checklist.md`.
+- [x] Keep `docs/requirements.md`.
+- [x] Create `docs/checklist.md`.
 - [x] Create `docs/design.md`.
 - [x] Create `docs/erd.md`.
 - [x] Create `docs/normalization.md`.
 - [x] Create `docs/decisions.md`.
 - [x] Create `docs/backup.md`.
-- [ ] Create `README.md`.
-- [ ] Keep `AGENTS.md`.
+- [x] Create `README.md`.
+- [x] Keep `AGENTS.md`.
 
 ## Completion criteria
 
-- [ ] Confirm `@sql/run_all.sql` rebuilds the database successfully.
-- [ ] Confirm all required tables exist.
-- [ ] Confirm all required constraints exist.
-- [ ] Confirm all required views exist.
-- [ ] Confirm the required package exists.
-- [ ] Confirm all required triggers exist.
-- [ ] Confirm all required roles exist.
-- [ ] Confirm sample data was inserted successfully.
-- [ ] Confirm tests show the expected `PASS` results.
-- [ ] Confirm documentation explains the design clearly.
-- [ ] Confirm no passwords or real personal data appear in the repository.
-- [ ] Be prepared to explain every important SQL and PL/SQL decision.
+- [x] Confirm `@sql/run_all.sql` rebuilds the database successfully.
+- [x] Confirm all required tables exist.
+- [x] Confirm all required constraints exist.
+- [x] Confirm all required views exist.
+- [x] Confirm the required package exists.
+- [x] Confirm all required triggers exist.
+- [x] Confirm all required roles exist.
+- [x] Confirm sample data was inserted successfully.
+- [x] Confirm tests show the expected `PASS` results.
+- [x] Confirm documentation explains the design clearly.
+- [x] Confirm no passwords or real personal data appear in the repository.
+- [x] Be prepared to explain every important SQL and PL/SQL decision.
 
-## Questions to resolve
+## Questions resolved
 
-- [ ] What exact columns, data types, and business rules should each required table use?
-- [ ] Which fields are considered “commonly searched” and therefore require indexes?
-- [ ] What appointment statuses, service categories, invoice statuses, payment methods, and medication units should be supported?
-- [ ] How should invoice totals be calculated: services only, prescriptions only, or both, and are taxes or discounts required?
-- [ ] Should a single appointment have one invoice only, and can an invoice be partially paid through multiple payments?
-- [ ] What exact appointment changes must be captured in `APPOINTMENT_AUDIT`, and how long must audit records be retained?
-- [ ] What counts as a vaccination being “due soon” beyond the required 30-day sample-data edge case?
-- [ ] What specific privileges should `receptionist`, `vet`, and `admin` receive?
-- [ ] Which report outputs, if any, are expected in addition to the required query script and views?
-- [ ] Is the optional Node.js/Express front end expected, or is it explicitly out of scope?
+- **What exact columns, data types, and business rules should each required table use?**
+  Answered in [design.md](./design.md); the shipped DDL in `sql/01_ddl.sql` matches it.
+- **Which fields are considered "commonly searched" and therefore require indexes?**
+  `OWNERS.last_name`, `APPOINTMENTS.appointment_date`, and `VACCINATIONS.due_date`, plus every
+  foreign-key column. All are created in `sql/01_ddl.sql`.
+- **What appointment statuses, invoice statuses, and payment methods should be supported?**
+  Appointments: `SCHEDULED`, `COMPLETED`, `CANCELLED`. Invoices: `UNPAID`, `PARTIAL`, `PAID`,
+  `VOID`. Payments: `CASH`, `CARD`, `TRANSFER`. Medication quantities use `NUMBER(10,2)` units.
+- **How should invoice totals be calculated, and are taxes or discounts required?**
+  Totals are the sum of `APPOINTMENT_SERVICES` and `PRESCRIPTIONS` line items. No taxes or
+  discounts are in scope; nothing is copied onto `INVOICES`, so a total can never go stale.
+- **Should a single appointment have one invoice only, and can it be partially paid?**
+  Yes to both: `UQ_INVOICES_APPT` allows one invoice per appointment, and `PAYMENTS` holds many
+  rows per invoice so an invoice can be paid in parts.
+- **What appointment changes must be captured in `APPOINTMENT_AUDIT`, and how long is retention?**
+  Inserts plus updates to date, status, veterinarian, and reason, with old and new values and
+  who/when. Retention is indefinite (no purge job); the table is append-only in normal use.
+- **What counts as a vaccination being "due soon"?**
+  `due_date` between today and today + 30 days, used by `vw_vaccinations_due_soon`, Q13, and the
+  sample-data edge cases.
+- **What privileges should `receptionist`, `vet`, and `admin` receive?**
+  Least privilege per role in `sql/07_security.sql`; see the role blocks and their comments.
+- **Which report outputs are expected beyond the query script and views?**
+  None; `sql/03_queries.sql` (18 queries) and the four views are the required reports.
+- **Is the Node.js/Express front end expected?**
+  It is optional. The shipped `web/` demo runs on fictional in-memory data and never connects to
+  Oracle; any future credentials stay on the Express server only.

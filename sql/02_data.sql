@@ -3,45 +3,29 @@
 SET DEFINE OFF
 
 -- Parent tables.
-INSERT ALL
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner01', 'Sample01', '555-0101', 'owner01@example.test', '1 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner02', 'Sample02', '555-0102', 'owner02@example.test', '2 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner03', 'Sample03', '555-0103', 'owner03@example.test', '3 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner04', 'Sample04', '555-0104', 'owner04@example.test', '4 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner05', 'Sample05', '555-0105', 'owner05@example.test', '5 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner06', 'Sample06', '555-0106', 'owner06@example.test', '6 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner07', 'Sample07', '555-0107', 'owner07@example.test', '7 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner08', 'Sample08', '555-0108', 'owner08@example.test', '8 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner09', 'Sample09', '555-0109', 'owner09@example.test', '9 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner10', 'Sample10', '555-0110', 'owner10@example.test', '10 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner11', 'Sample11', '555-0111', 'owner11@example.test', '11 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner12', 'Sample12', '555-0112', 'owner12@example.test', '12 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner13', 'Sample13', '555-0113', 'owner13@example.test', '13 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner14', 'Sample14', '555-0114', 'owner14@example.test', '14 Sample Lane')
-    INTO owners (first_name, last_name, phone, email, address_line)
-        VALUES ('Owner15', 'Sample15', '555-0115', 'owner15@example.test', '15 Sample Lane')
-SELECT 1 FROM dual;
+-- NOTE: single-row inserts are required here. In a multi-table INSERT ALL the
+-- identity column is evaluated once for the whole statement, so every row would
+-- receive the same OWNER_ID and violate the primary key.
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner01', 'Sample01', '555-0101', 'owner01@example.test', '1 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner02', 'Sample02', '555-0102', 'owner02@example.test', '2 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner03', 'Sample03', '555-0103', 'owner03@example.test', '3 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner04', 'Sample04', '555-0104', 'owner04@example.test', '4 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner05', 'Sample05', '555-0105', 'owner05@example.test', '5 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner06', 'Sample06', '555-0106', 'owner06@example.test', '6 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner07', 'Sample07', '555-0107', 'owner07@example.test', '7 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner08', 'Sample08', '555-0108', 'owner08@example.test', '8 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner09', 'Sample09', '555-0109', 'owner09@example.test', '9 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner10', 'Sample10', '555-0110', 'owner10@example.test', '10 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner11', 'Sample11', '555-0111', 'owner11@example.test', '11 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner12', 'Sample12', '555-0112', 'owner12@example.test', '12 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner13', 'Sample13', '555-0113', 'owner13@example.test', '13 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner14', 'Sample14', '555-0114', 'owner14@example.test', '14 Sample Lane');
+INSERT INTO owners (first_name, last_name, phone, email, address_line) VALUES ('Owner15', 'Sample15', '555-0115', 'owner15@example.test', '15 Sample Lane');
 
-INSERT ALL
-    INTO species (species_name) VALUES ('Dog')
-    INTO species (species_name) VALUES ('Cat')
-    INTO species (species_name) VALUES ('Rabbit')
-    INTO species (species_name) VALUES ('Bird')
-SELECT 1 FROM dual;
+INSERT INTO species (species_name) VALUES ('Dog');
+INSERT INTO species (species_name) VALUES ('Cat');
+INSERT INTO species (species_name) VALUES ('Rabbit');
+INSERT INTO species (species_name) VALUES ('Bird');
 
 INSERT INTO breeds (species_id, breed_name)
 SELECT species_id, 'Golden Retriever' FROM species WHERE species_name = 'Dog';
@@ -60,42 +44,30 @@ SELECT species_id, 'Budgerigar' FROM species WHERE species_name = 'Bird';
 INSERT INTO breeds (species_id, breed_name)
 SELECT species_id, 'Cockatiel' FROM species WHERE species_name = 'Bird';
 
-INSERT ALL
-    INTO veterinarians (first_name, last_name, license_number, phone, email)
-        VALUES ('Vet01', 'Clinic01', 'VET-001', '555-0201', 'vet01@example.test')
-    INTO veterinarians (first_name, last_name, license_number, phone, email)
-        VALUES ('Vet02', 'Clinic02', 'VET-002', '555-0202', 'vet02@example.test')
-    INTO veterinarians (first_name, last_name, license_number, phone, email)
-        VALUES ('Vet03', 'Clinic03', 'VET-003', '555-0203', 'vet03@example.test')
-    INTO veterinarians (first_name, last_name, license_number, phone, email)
-        VALUES ('Vet04', 'Clinic04', 'VET-004', '555-0204', 'vet04@example.test')
-    INTO veterinarians (first_name, last_name, license_number, phone, email)
-        VALUES ('Vet05', 'Clinic05', 'VET-005', '555-0205', 'vet05@example.test')
-    INTO veterinarians (first_name, last_name, license_number, phone, email)
-        VALUES ('Vet06', 'Clinic06', 'VET-006', '555-0206', 'vet06@example.test')
-SELECT 1 FROM dual;
+INSERT INTO veterinarians (first_name, last_name, license_number, phone, email) VALUES ('Vet01', 'Clinic01', 'VET-001', '555-0201', 'vet01@example.test');
+INSERT INTO veterinarians (first_name, last_name, license_number, phone, email) VALUES ('Vet02', 'Clinic02', 'VET-002', '555-0202', 'vet02@example.test');
+INSERT INTO veterinarians (first_name, last_name, license_number, phone, email) VALUES ('Vet03', 'Clinic03', 'VET-003', '555-0203', 'vet03@example.test');
+INSERT INTO veterinarians (first_name, last_name, license_number, phone, email) VALUES ('Vet04', 'Clinic04', 'VET-004', '555-0204', 'vet04@example.test');
+INSERT INTO veterinarians (first_name, last_name, license_number, phone, email) VALUES ('Vet05', 'Clinic05', 'VET-005', '555-0205', 'vet05@example.test');
+INSERT INTO veterinarians (first_name, last_name, license_number, phone, email) VALUES ('Vet06', 'Clinic06', 'VET-006', '555-0206', 'vet06@example.test');
 
-INSERT ALL
-    INTO services (service_name, standard_price) VALUES ('Consultation', 35)
-    INTO services (service_name, standard_price) VALUES ('Wellness Exam', 50)
-    INTO services (service_name, standard_price) VALUES ('Vaccination Service', 25)
-    INTO services (service_name, standard_price) VALUES ('Dental Cleaning', 120)
-    INTO services (service_name, standard_price) VALUES ('X-Ray', 95)
-    INTO services (service_name, standard_price) VALUES ('Lab Test', 45)
-    INTO services (service_name, standard_price) VALUES ('Wound Care', 40)
-    INTO services (service_name, standard_price) VALUES ('Nail Trim', 20)
-SELECT 1 FROM dual;
+INSERT INTO services (service_name, standard_price) VALUES ('Consultation', 35);
+INSERT INTO services (service_name, standard_price) VALUES ('Wellness Exam', 50);
+INSERT INTO services (service_name, standard_price) VALUES ('Vaccination Service', 25);
+INSERT INTO services (service_name, standard_price) VALUES ('Dental Cleaning', 120);
+INSERT INTO services (service_name, standard_price) VALUES ('X-Ray', 95);
+INSERT INTO services (service_name, standard_price) VALUES ('Lab Test', 45);
+INSERT INTO services (service_name, standard_price) VALUES ('Wound Care', 40);
+INSERT INTO services (service_name, standard_price) VALUES ('Nail Trim', 20);
 
-INSERT ALL
-    INTO medications (medication_name, stock_quantity, unit_price) VALUES ('AmoxiPet', 200, 2.50)
-    INTO medications (medication_name, stock_quantity, unit_price) VALUES ('PainRelief Vet', 150, 1.75)
-    INTO medications (medication_name, stock_quantity, unit_price) VALUES ('EarCare Drops', 80, 8.50)
-    INTO medications (medication_name, stock_quantity, unit_price) VALUES ('SkinHeal Cream', 90, 6.25)
-    INTO medications (medication_name, stock_quantity, unit_price) VALUES ('Digestive Aid', 120, 3.00)
-    INTO medications (medication_name, stock_quantity, unit_price) VALUES ('EyeClear Drops', 75, 7.00)
-    INTO medications (medication_name, stock_quantity, unit_price) VALUES ('Joint Support', 100, 4.50)
-    INTO medications (medication_name, stock_quantity, unit_price) VALUES ('Parasite Guard', 180, 5.00)
-SELECT 1 FROM dual;
+INSERT INTO medications (medication_name, stock_quantity, unit_price) VALUES ('AmoxiPet', 200, 2.50);
+INSERT INTO medications (medication_name, stock_quantity, unit_price) VALUES ('PainRelief Vet', 150, 1.75);
+INSERT INTO medications (medication_name, stock_quantity, unit_price) VALUES ('EarCare Drops', 80, 8.50);
+INSERT INTO medications (medication_name, stock_quantity, unit_price) VALUES ('SkinHeal Cream', 90, 6.25);
+INSERT INTO medications (medication_name, stock_quantity, unit_price) VALUES ('Digestive Aid', 120, 3.00);
+INSERT INTO medications (medication_name, stock_quantity, unit_price) VALUES ('EyeClear Drops', 75, 7.00);
+INSERT INTO medications (medication_name, stock_quantity, unit_price) VALUES ('Joint Support', 100, 4.50);
+INSERT INTO medications (medication_name, stock_quantity, unit_price) VALUES ('Parasite Guard', 180, 5.00);
 
 -- Child records: 25 pets, linked to the owners and breeds above.
 DECLARE

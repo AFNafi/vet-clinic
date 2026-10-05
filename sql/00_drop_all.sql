@@ -25,9 +25,10 @@ BEGIN
 
     drop_if_exists('DROP PACKAGE vet_clinic_pkg');
 
+    -- Negative-stock prevention lives inside trg_reduce_medication_stock,
+    -- so there is no separate stock-protection trigger to drop.
     drop_if_exists('DROP TRIGGER trg_appointment_audit');
     drop_if_exists('DROP TRIGGER trg_reduce_medication_stock');
-    drop_if_exists('DROP TRIGGER trg_prevent_negative_stock');
     drop_if_exists('DROP TRIGGER trg_set_invoice_date');
 
     -- Drop child tables before parent tables to preserve referential integrity.
