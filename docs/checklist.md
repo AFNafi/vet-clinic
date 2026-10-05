@@ -116,13 +116,13 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## Security and transactions
 
-- [ ] Create the `receptionist` role.
-- [ ] Create the `vet` role.
-- [ ] Create the `admin` role.
-- [ ] Grant each role only the privileges required for its job.
-- [ ] Demonstrate `COMMIT`.
-- [ ] Demonstrate `ROLLBACK`.
-- [ ] Demonstrate `SAVEPOINT`.
+- [x] Create the `receptionist` role.
+- [x] Create the `vet` role.
+- [x] Create the `admin` role.
+- [x] Grant each role only the privileges required for its job.
+- [x] Demonstrate `COMMIT`.
+- [x] Demonstrate `ROLLBACK`.
+- [x] Demonstrate `SAVEPOINT`.
 - [ ] Do not save passwords in the repository.
 
 ## Testing
@@ -146,7 +146,7 @@ Use this checklist to track every project deliverable and grading criterion.
 - [x] Create `sql/04_views.sql`.
 - [x] Create `sql/05_package.sql`.
 - [x] Create `sql/06_triggers.sql`.
-- [ ] Create `sql/07_security.sql`.
+- [x] Create `sql/07_security.sql`.
 - [ ] Create `sql/08_tests.sql`.
 - [x] Create `sql/run_all.sql`.
 - [ ] Keep `docs/requirements.md`.
@@ -155,7 +155,7 @@ Use this checklist to track every project deliverable and grading criterion.
 - [x] Create `docs/erd.md`.
 - [x] Create `docs/normalization.md`.
 - [x] Create `docs/decisions.md`.
-- [ ] Create `docs/backup.md`.
+- [x] Create `docs/backup.md`.
 - [ ] Create `README.md`.
 - [ ] Keep `AGENTS.md`.
 

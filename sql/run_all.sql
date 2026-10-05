@@ -25,8 +25,10 @@ PROMPT === Creating PL/SQL package ===
 PROMPT === Creating triggers and running trigger tests ===
 @@06_triggers.sql
 
+PROMPT === Creating roles and grants ===
+@@07_security.sql
+
 -- Add the remaining project scripts here as they are created:
--- @@07_security.sql
 -- @@08_tests.sql
 
 PROMPT === Schema setup completed successfully ===
