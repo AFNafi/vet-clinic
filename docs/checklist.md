@@ -78,24 +78,24 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## Queries and reports
 
-- [ ] Create at least 18 useful Oracle SQL queries.
-- [ ] Add a comment to every query explaining its business question.
-- [ ] Include an inner join query.
-- [ ] Include a left or outer join query.
-- [ ] Include a multi-table join query.
-- [ ] Include `GROUP BY` and `HAVING`.
-- [ ] Include subqueries.
-- [ ] Include `EXISTS` or `NOT EXISTS`.
-- [ ] Include analytic functions, including `RANK()` and `SUM() OVER`.
-- [ ] Include a top-N query using `FETCH FIRST`.
-- [ ] Include filtering, sorting, and date-based searching.
+- [x] Create at least 18 useful Oracle SQL queries.
+- [x] Add a comment to every query explaining its business question.
+- [x] Include an inner join query.
+- [x] Include a left or outer join query.
+- [x] Include a multi-table join query.
+- [x] Include `GROUP BY` and `HAVING`.
+- [x] Include subqueries.
+- [x] Include `EXISTS` or `NOT EXISTS`.
+- [x] Include analytic functions, including `RANK()` and `SUM() OVER`.
+- [x] Include a top-N query using `FETCH FIRST`.
+- [x] Include filtering, sorting, and date-based searching.
 
 ## Views
 
-- [ ] Create an upcoming appointments view.
-- [ ] Create an owner outstanding balances view.
-- [ ] Create a veterinarian workload by month view.
-- [ ] Create a vaccinations due soon view.
+- [x] Create an upcoming appointments view.
+- [x] Create an owner outstanding balances view.
+- [x] Create a veterinarian workload by month view.
+- [x] Create a vaccinations due soon view.
 
 ## PL/SQL
 
@@ -142,8 +142,8 @@ Use this checklist to track every project deliverable and grading criterion.
 - [x] Create `sql/00_drop_all.sql`.
 - [x] Create `sql/01_ddl.sql`.
 - [x] Create `sql/02_data.sql`.
-- [ ] Create `sql/03_queries.sql`.
-- [ ] Create `sql/04_views.sql`.
+- [x] Create `sql/03_queries.sql`.
+- [x] Create `sql/04_views.sql`.
 - [ ] Create `sql/05_package.sql`.
 - [ ] Create `sql/06_triggers.sql`.
 - [ ] Create `sql/07_security.sql`.

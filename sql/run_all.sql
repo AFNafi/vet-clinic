@@ -13,9 +13,13 @@ PROMPT === Creating Veterinary Clinic schema ===
 PROMPT === Inserting fictional sample data ===
 @@02_data.sql
 
+PROMPT === Running business queries ===
+@@03_queries.sql
+
+PROMPT === Creating reporting views ===
+@@04_views.sql
+
 -- Add the remaining project scripts here as they are created:
--- @@03_queries.sql
--- @@04_views.sql
 -- @@05_package.sql
 -- @@06_triggers.sql
 -- @@07_security.sql
