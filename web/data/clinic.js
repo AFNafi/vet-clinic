@@ -1,15 +1,19 @@
 // In-memory practice records for the Vetwise Clinic console.
 // Swap these for Oracle queries (node-oracledb) when the database is connected.
 
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
-
 const startOfToday = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return today;
 };
 
-const dateFromToday = (dayOffset) => new Date(startOfToday().getTime() + dayOffset * DAY_IN_MS);
+// Move by calendar days with setDate(). Adding 24 hours of milliseconds gives the
+// wrong day when a daylight-saving change makes a day 23 or 25 hours long.
+const dateFromToday = (dayOffset) => {
+  const date = startOfToday();
+  date.setDate(date.getDate() + dayOffset);
+  return date;
+};
 
 const toIsoDate = (date) => {
   const year = date.getFullYear();

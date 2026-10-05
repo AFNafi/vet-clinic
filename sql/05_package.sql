@@ -148,7 +148,9 @@ CREATE OR REPLACE PACKAGE BODY vet_clinic_pkg AS
             RAISE_APPLICATION_ERROR(-20021, 'A vaccine name is required.');
         END IF;
 
-        IF p_vaccination_date IS NULL OR p_vaccination_date > TRUNC(SYSDATE) THEN
+        -- Compare whole days. The default value SYSDATE carries a time of day and
+        -- would otherwise be rejected as "in the future" by its own default.
+        IF p_vaccination_date IS NULL OR TRUNC(p_vaccination_date) > TRUNC(SYSDATE) THEN
             RAISE_APPLICATION_ERROR(-20022, 'The vaccination date cannot be in the future.');
         END IF;
 
@@ -161,7 +163,7 @@ CREATE OR REPLACE PACKAGE BODY vet_clinic_pkg AS
             RAISE_APPLICATION_ERROR(-20023, 'The selected pet does not exist.');
         END IF;
 
-        v_due_date := p_vaccination_date + 365;
+        v_due_date := TRUNC(p_vaccination_date) + 365;
 
         INSERT INTO vaccinations (
             pet_id,
@@ -173,7 +175,7 @@ CREATE OR REPLACE PACKAGE BODY vet_clinic_pkg AS
         VALUES (
             p_pet_id,
             TRIM(p_vaccine_name),
-            p_vaccination_date,
+            TRUNC(p_vaccination_date),
             v_due_date,
             'Registered through vet_clinic_pkg'
         );

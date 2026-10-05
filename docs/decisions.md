@@ -87,6 +87,13 @@ one JSON object (`stats`, `upcoming`, `alerts`, `clinic`), derived from the same
 that back the other routes. The page still fetches patients, veterinarians, appointments, and
 invoices separately because those lists are re-rendered by their own views and filters.
 
+## 2026-10-06: Refresh the console appearance without changing its features
+
+The dashboard keeps its existing navigation, API requests, filters, search, and booking flow. Its
+styles use a clearer visual hierarchy, more responsive layouts, restrained motion, and reduced
+motion support. The booking action remains visible on small screens, where the previous layout
+hid it.
+
 ## 2026-10-06: Booking dates and times are validated as real calendar values
 
 A regular expression only checks shape, so `2026-13-45` and `25:99` passed the first version of

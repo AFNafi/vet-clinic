@@ -7,6 +7,7 @@ const router = express.Router();
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK_TIME = /^\d{2}:\d{2}$/;
+const MAX_REASON_LENGTH = 120; // Matches maxlength on the booking form input.
 
 // Shape checks are not enough: 2026-13-45 matches ISO_DATE but is not a real
 // date. Build a Date from the numeric parts and read the parts back - this
@@ -153,8 +154,12 @@ router.post('/appointments', (request, response) => {
   if (!patient) errors.push('Select a registered patient.');
   if (!veterinarian) errors.push('Select a veterinarian.');
   if (!isRealDate(date)) errors.push('Choose a valid date.');
+  else if (date < toIsoDate(dateFromToday(0))) errors.push('Choose today or a later date.');
   if (!isRealTime(time)) errors.push('Choose a valid time.');
   if (!reason) errors.push('Enter the reason for the visit.');
+  else if (reason.length > MAX_REASON_LENGTH) {
+    errors.push(`Keep the reason to ${MAX_REASON_LENGTH} characters or fewer.`);
+  }
 
   if (errors.length > 0) {
     return response.status(400).json({ errors });
