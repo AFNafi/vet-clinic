@@ -10,8 +10,10 @@ PROMPT === Resetting Veterinary Clinic objects ===
 PROMPT === Creating Veterinary Clinic schema ===
 @@01_ddl.sql
 
+PROMPT === Inserting fictional sample data ===
+@@02_data.sql
+
 -- Add the remaining project scripts here as they are created:
--- @@02_data.sql
 -- @@03_queries.sql
 -- @@04_views.sql
 -- @@05_package.sql

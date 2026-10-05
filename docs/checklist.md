@@ -60,21 +60,21 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## Sample data
 
-- [ ] Use fake data only.
-- [ ] Do not store real names, phone numbers, email addresses, or addresses.
-- [ ] Insert at least 15 owners.
-- [ ] Insert at least 25 pets.
-- [ ] Insert at least 6 veterinarians.
-- [ ] Insert at least 60 appointments spanning six months.
-- [ ] Insert realistic services.
-- [ ] Insert realistic medications.
-- [ ] Insert realistic prescriptions.
-- [ ] Insert realistic vaccination records.
-- [ ] Insert realistic invoices.
-- [ ] Insert realistic payments.
-- [ ] Include unpaid-invoice edge cases.
-- [ ] Include pets with multiple appointments.
-- [ ] Include vaccinations due within 30 days.
+- [x] Use fake data only.
+- [x] Do not store real names, phone numbers, email addresses, or addresses.
+- [x] Insert at least 15 owners.
+- [x] Insert at least 25 pets.
+- [x] Insert at least 6 veterinarians.
+- [x] Insert at least 60 appointments spanning six months.
+- [x] Insert realistic services.
+- [x] Insert realistic medications.
+- [x] Insert realistic prescriptions.
+- [x] Insert realistic vaccination records.
+- [x] Insert realistic invoices.
+- [x] Insert realistic payments.
+- [x] Include unpaid-invoice edge cases.
+- [x] Include pets with multiple appointments.
+- [x] Include vaccinations due within 30 days.
 
 ## Queries and reports
 
@@ -141,7 +141,7 @@ Use this checklist to track every project deliverable and grading criterion.
 
 - [x] Create `sql/00_drop_all.sql`.
 - [x] Create `sql/01_ddl.sql`.
-- [ ] Create `sql/02_data.sql`.
+- [x] Create `sql/02_data.sql`.
 - [ ] Create `sql/03_queries.sql`.
 - [ ] Create `sql/04_views.sql`.
 - [ ] Create `sql/05_package.sql`.
