@@ -16,6 +16,7 @@ public/index.html  Single-page layout: dashboard, patients, appointments, billin
 public/js/main.js  Front-end module: fetches the API and renders each view
 public/styles.css  Design tokens and component styles
 check_dom.js       Sanity check that every id/class main.js queries exists in index.html
+test/api.test.js   Repeatable API tests using Node's built-in test runner
 ```
 
 ## Run locally
@@ -38,10 +39,11 @@ uncommitted `web/.env` file to use a different port. The example is `web/.env.ex
 - Unknown `/api/...` paths return `404 {"error":"Not found"}` instead of the HTML page.
 
 Run `node check_dom.js` after changing the markup or the front-end script to confirm every
-element reference still exists.
+element reference still exists. Run `npm test` to test the page, API routes, filtering, search,
+appointment booking, conflicts, input validation, and JSON error responses. The test server binds
+to an ephemeral local port and does not need a running clinic server or Oracle database.
 
 ## Security note
 
 The browser requests only the demo API routes served by Express. Keep any future Oracle
 credentials and database access on the server; never put them in `public/` files.
-

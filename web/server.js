@@ -30,6 +30,10 @@ app.use((error, request, response, next) => {
   return response.status(error.status || 500).json({ error: 'Something went wrong.' });
 });
 
-app.listen(port, () => {
-  console.log(`Vetwise Clinic console running at http://localhost:${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Vetwise Clinic console running at http://localhost:${port}`);
+  });
+}
+
+module.exports = app;
