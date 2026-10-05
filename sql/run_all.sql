@@ -28,7 +28,7 @@ PROMPT === Creating triggers and running trigger tests ===
 PROMPT === Creating roles and grants ===
 @@07_security.sql
 
--- Add the remaining project scripts here as they are created:
--- @@08_tests.sql
+PROMPT === Running final tests ===
+@@08_tests.sql
 
-PROMPT === Schema setup completed successfully ===
+PROMPT === Database rebuild and tests completed successfully ===

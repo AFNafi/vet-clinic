@@ -127,15 +127,15 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## Testing
 
-- [ ] Test invalid foreign-key values.
-- [ ] Test duplicate unique values.
-- [ ] Test invalid `CHECK` constraint values.
-- [ ] Test valid PL/SQL procedure calls.
-- [ ] Test invalid PL/SQL procedure calls.
-- [ ] Test PL/SQL function results.
-- [ ] Test trigger behavior.
-- [ ] Test a complete rebuild from an empty schema.
-- [ ] Print clear `PASS` or `FAIL` messages through `DBMS_OUTPUT`.
+- [x] Test invalid foreign-key values.
+- [x] Test duplicate unique values.
+- [x] Test invalid `CHECK` constraint values.
+- [x] Test valid PL/SQL procedure calls.
+- [x] Test invalid PL/SQL procedure calls.
+- [x] Test PL/SQL function results.
+- [x] Test trigger behavior.
+- [x] Test a complete rebuild from an empty schema.
+- [x] Print clear `PASS` or `FAIL` messages through `DBMS_OUTPUT`.
 
 ## Required files and documentation
 
@@ -147,7 +147,7 @@ Use this checklist to track every project deliverable and grading criterion.
 - [x] Create `sql/05_package.sql`.
 - [x] Create `sql/06_triggers.sql`.
 - [x] Create `sql/07_security.sql`.
-- [ ] Create `sql/08_tests.sql`.
+- [x] Create `sql/08_tests.sql`.
 - [x] Create `sql/run_all.sql`.
 - [ ] Keep `docs/requirements.md`.
 - [ ] Create `docs/checklist.md`.
