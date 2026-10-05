@@ -50,9 +50,9 @@ Stores pet details. Every pet belongs to one owner and has one breed.
 | breed_id | NUMBER | NOT NULL, foreign key to `BREEDS` |
 | pet_name | VARCHAR2(80) | NOT NULL |
 | birth_date | DATE | Optional |
-| sex | CHAR(1) | NOT NULL, CHECK (`sex` IN ('M', 'F', 'U')) |
+| sex | VARCHAR2(1) | NOT NULL, CHECK (`sex` IN ('M', 'F', 'U')) |
 | microchip_number | VARCHAR2(50) | UNIQUE; optional |
-| is_active | CHAR(1) | NOT NULL, DEFAULT 'Y', CHECK (`is_active` IN ('Y', 'N')) |
+| is_active | VARCHAR2(1) | NOT NULL, DEFAULT 'Y', CHECK (`is_active` IN ('Y', 'N')) |
 
 ### VETERINARIANS
 
@@ -66,7 +66,7 @@ Stores veterinarians who can perform appointments.
 | license_number | VARCHAR2(50) | NOT NULL, UNIQUE |
 | phone | VARCHAR2(30) | NOT NULL |
 | email | VARCHAR2(100) | NOT NULL, UNIQUE |
-| is_active | CHAR(1) | NOT NULL, DEFAULT 'Y', CHECK (`is_active` IN ('Y', 'N')) |
+| is_active | VARCHAR2(1) | NOT NULL, DEFAULT 'Y', CHECK (`is_active` IN ('Y', 'N')) |
 
 ### APPOINTMENTS
 
@@ -92,7 +92,7 @@ Stores the clinic's service catalogue and normal prices.
 | service_id | NUMBER | Identity primary key |
 | service_name | VARCHAR2(100) | NOT NULL, UNIQUE |
 | standard_price | NUMBER(10,2) | NOT NULL, CHECK (`standard_price` >= 0) |
-| is_active | CHAR(1) | NOT NULL, DEFAULT 'Y', CHECK (`is_active` IN ('Y', 'N')) |
+| is_active | VARCHAR2(1) | NOT NULL, DEFAULT 'Y', CHECK (`is_active` IN ('Y', 'N')) |
 
 ### APPOINTMENT_SERVICES
 
@@ -119,7 +119,7 @@ Stores medicine stock and current selling prices.
 | medication_name | VARCHAR2(150) | NOT NULL, UNIQUE |
 | stock_quantity | NUMBER(10,2) | NOT NULL, DEFAULT 0, CHECK (`stock_quantity` >= 0) |
 | unit_price | NUMBER(10,2) | NOT NULL, CHECK (`unit_price` >= 0) |
-| is_active | CHAR(1) | NOT NULL, DEFAULT 'Y', CHECK (`is_active` IN ('Y', 'N')) |
+| is_active | VARCHAR2(1) | NOT NULL, DEFAULT 'Y', CHECK (`is_active` IN ('Y', 'N')) |
 
 ### PRESCRIPTIONS
 

@@ -40,7 +40,7 @@ erDiagram
         NUMBER breed_id FK
         VARCHAR2 pet_name
         DATE birth_date
-        CHAR sex
+        VARCHAR2 sex
     }
     VETERINARIANS {
         NUMBER veterinarian_id PK

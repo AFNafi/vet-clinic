@@ -43,20 +43,20 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## Required tables and DDL
 
-- [ ] Create `OWNERS` for pet-owner information.
-- [ ] Create `SPECIES` for animal species.
-- [ ] Create `BREEDS`, linked to `SPECIES`.
-- [ ] Create `PETS`, linked to an owner and breed.
-- [ ] Create `VETERINARIANS` for veterinarian information.
-- [ ] Create `APPOINTMENTS`, linking pets and veterinarians.
-- [ ] Create `SERVICES` for clinic services and prices.
-- [ ] Create `APPOINTMENT_SERVICES` for services performed during an appointment.
-- [ ] Create `MEDICATIONS` for medication stock and prices.
-- [ ] Create `PRESCRIPTIONS` for medications prescribed during appointments.
-- [ ] Create `VACCINATIONS` for pet vaccination records.
-- [ ] Create `INVOICES` for appointment charges.
-- [ ] Create `PAYMENTS` for payments against invoices.
-- [ ] Create `APPOINTMENT_AUDIT` for appointment-change history.
+- [x] Create `OWNERS` for pet-owner information.
+- [x] Create `SPECIES` for animal species.
+- [x] Create `BREEDS`, linked to `SPECIES`.
+- [x] Create `PETS`, linked to an owner and breed.
+- [x] Create `VETERINARIANS` for veterinarian information.
+- [x] Create `APPOINTMENTS`, linking pets and veterinarians.
+- [x] Create `SERVICES` for clinic services and prices.
+- [x] Create `APPOINTMENT_SERVICES` for services performed during an appointment.
+- [x] Create `MEDICATIONS` for medication stock and prices.
+- [x] Create `PRESCRIPTIONS` for medications prescribed during appointments.
+- [x] Create `VACCINATIONS` for pet vaccination records.
+- [x] Create `INVOICES` for appointment charges.
+- [x] Create `PAYMENTS` for payments against invoices.
+- [x] Create `APPOINTMENT_AUDIT` for appointment-change history.
 
 ## Sample data
 
@@ -139,8 +139,8 @@ Use this checklist to track every project deliverable and grading criterion.
 
 ## Required files and documentation
 
-- [ ] Create `sql/00_drop_all.sql`.
-- [ ] Create `sql/01_ddl.sql`.
+- [x] Create `sql/00_drop_all.sql`.
+- [x] Create `sql/01_ddl.sql`.
 - [ ] Create `sql/02_data.sql`.
 - [ ] Create `sql/03_queries.sql`.
 - [ ] Create `sql/04_views.sql`.
@@ -148,13 +148,13 @@ Use this checklist to track every project deliverable and grading criterion.
 - [ ] Create `sql/06_triggers.sql`.
 - [ ] Create `sql/07_security.sql`.
 - [ ] Create `sql/08_tests.sql`.
-- [ ] Create `sql/run_all.sql`.
+- [x] Create `sql/run_all.sql`.
 - [ ] Keep `docs/requirements.md`.
 - [ ] Create `docs/checklist.md`.
 - [x] Create `docs/design.md`.
 - [x] Create `docs/erd.md`.
 - [x] Create `docs/normalization.md`.
-- [ ] Create `docs/decisions.md`.
+- [x] Create `docs/decisions.md`.
 - [ ] Create `docs/backup.md`.
 - [ ] Create `README.md`.
 - [ ] Keep `AGENTS.md`.
