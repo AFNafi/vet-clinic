@@ -93,13 +93,13 @@ The dashboard keeps its existing navigation, API requests, filters, search, and 
 styles use a clearer visual hierarchy, more responsive layouts, restrained motion, and reduced
 motion support. The booking action remains visible on small screens, where the previous layout
 hid it. A later visual pass added a small dialog entrance transition and sticky table headings to
-make long lists easier to scan. The console uses a light Apple-inspired visual style: spacious
-neutral surfaces, system typography, subtle depth, and restrained blue accents. This changes
-presentation only; the clinic's existing navigation, data, search, filters, and booking flow are
-unchanged. Native system font stacks avoid remote font downloads. Translucent navigation and table
-surfaces have solid fallbacks for reduced-transparency settings and browsers without
-backdrop-filter support. Apple was used as a style reference only; no Apple branding, assets,
-content, or page components are used.
+make long lists easier to scan. The console uses a dark Liquid Glass-inspired style with deep
+navy shades, translucent layered surfaces, backdrop blur, fine highlights, and soft blue-green
+accents. This changes presentation only; the clinic's existing navigation, data, search, filters,
+and booking flow are unchanged. Native system font stacks avoid remote font downloads.
+Translucent surfaces have solid dark fallbacks for reduced-transparency settings and browsers
+without backdrop-filter support. Apple was used as a style reference only; no Apple branding,
+assets, content, or page components are used.
 
 The visual direction was informed by the task-focused, clinician-centered presentation on
 [Shepherd](https://www.shepherd.vet/) and [Vetspire](https://www.vetspire.ai/), checked on
