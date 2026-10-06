@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-  clinic, patients, veterinarians, appointments, invoices, toIsoDate, dateFromToday
+  clinic, profiles, patients, veterinarians, appointments, invoices, toIsoDate, dateFromToday
 } = require('../data/clinic');
 
 const router = express.Router();
@@ -8,6 +8,12 @@ const router = express.Router();
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK_TIME = /^\d{2}:\d{2}$/;
 const MAX_REASON_LENGTH = 120; // Matches maxlength on the booking form input.
+const validPatientFields = {
+  name: ['Patient name', 60],
+  species: ['Species', 40],
+  breed: ['Breed', 60],
+  owner: ['Owner name', 80]
+};
 
 // Shape checks are not enough: 2026-13-45 matches ISO_DATE but is not a real
 // date. Build a Date from the numeric parts and read the parts back - this
@@ -36,6 +42,10 @@ const nextAppointmentId = () =>
 
 router.get('/overview', (request, response) => {
   response.json({ clinic });
+});
+
+router.get('/profiles', (request, response) => {
+  response.json(profiles);
 });
 
 // Dashboard summary: four stat cards, the next visits, alert cards, and the
@@ -120,6 +130,30 @@ router.get('/patients', (request, response) => {
   response.json(matches);
 });
 
+router.post('/patients', (request, response) => {
+  const body = request.body || {};
+  const values = Object.fromEntries(Object.entries(validPatientFields)
+    .map(([field]) => [field, String(body[field] || '').trim()]));
+  const errors = [];
+
+  for (const [field, [label, maxLength]] of Object.entries(validPatientFields)) {
+    const value = values[field];
+    if (!value) errors.push(`${label} is required.`);
+    else if (value.length > maxLength) errors.push(`${label} must be ${maxLength} characters or fewer.`);
+  }
+
+  if (errors.length) return response.status(400).json({ errors });
+
+  const patient = {
+    id: patients.reduce((highest, item) => Math.max(highest, item.id), 0) + 1,
+    ...values,
+    status: 'Active',
+    lastVisit: toIsoDate(dateFromToday(0))
+  };
+  patients.push(patient);
+  return response.status(201).json(patient);
+});
+
 router.get('/veterinarians', (request, response) => {
   response.json(veterinarians);
 });
@@ -192,6 +226,39 @@ router.post('/appointments', (request, response) => {
 
   appointments.push(appointment);
   return response.status(201).json(appointment);
+});
+
+router.patch('/appointments/:id', (request, response) => {
+  const appointment = appointments.find((item) => item.id === Number(request.params.id));
+  if (!appointment) return response.status(404).json({ errors: ['Appointment not found.'] });
+
+  const status = String(request.body?.status || '').trim().toLowerCase();
+  if (!['completed', 'cancelled'].includes(status)) {
+    return response.status(400).json({ errors: ['Choose Completed or Cancelled.'] });
+  }
+  if (appointment.status !== 'Scheduled') {
+    return response.status(409).json({ errors: ['Only scheduled appointments can be updated.'] });
+  }
+  if (status === 'completed' && appointment.date > toIsoDate(dateFromToday(0))) {
+    return response.status(409).json({ errors: ['An upcoming appointment cannot be completed.'] });
+  }
+
+  appointment.status = status === 'completed' ? 'Completed' : 'Cancelled';
+  return response.json(appointment);
+});
+
+router.patch('/invoices/:id', (request, response) => {
+  const invoice = invoices.find((item) => item.id === Number(request.params.id));
+  if (!invoice) return response.status(404).json({ errors: ['Invoice not found.'] });
+  if (String(request.body?.status || '').trim().toLowerCase() !== 'paid') {
+    return response.status(400).json({ errors: ['Invoice status can only be changed to Paid.'] });
+  }
+  if (invoice.status === 'Paid') {
+    return response.status(409).json({ errors: ['This invoice is already paid.'] });
+  }
+
+  invoice.status = 'Paid';
+  return response.json(invoice);
 });
 
 module.exports = router;

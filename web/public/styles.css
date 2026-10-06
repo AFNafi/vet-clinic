@@ -767,3 +767,54 @@ tbody tr:hover { background: rgba(146, 208, 185, .07); }
   .booking-dialog { background: #182333; }
   .booking-dialog::backdrop { backdrop-filter: none; }
 }
+
+.profile-details { min-width: 0; flex: 1; }
+.profile-details strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-select-label {
+  display: grid;
+  gap: 4px;
+  margin-top: 9px;
+  color: #aab9ca;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.profile-select-label select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 24px 6px 8px;
+  border: 1px solid rgba(221, 234, 250, .15);
+  border-radius: 8px;
+  color: #e7edf5;
+  background: rgba(21, 34, 49, .65);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.profile-select-label select option { color: #f3f6fb; background: #1b2738; }
+.row-actions { white-space: nowrap; }
+.table-action {
+  margin: 2px 6px 2px 0;
+  padding: 6px 9px;
+  border: 1px solid rgba(164, 228, 199, .2);
+  border-radius: 999px;
+  color: #d2f3e2;
+  background: rgba(54, 112, 86, .24);
+  font-size: 11px;
+  font-weight: 600;
+}
+.table-action:hover { background: rgba(70, 143, 108, .4); }
+.table-action.danger-action {
+  border-color: rgba(255, 164, 151, .2);
+  color: #ffd1c9;
+  background: rgba(93, 43, 42, .25);
+}
+.table-action.danger-action:hover { background: rgba(122, 53, 50, .45); }
+.admin-only[hidden], [hidden] { display: none !important; }
+
+@media (max-width: 600px) {
+  .profile-select-label { font-size: 8px; }
+  .profile-select-label select { font-size: 9px; }
+  .table-action { padding: 6px 8px; }
+}

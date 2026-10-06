@@ -3,6 +3,8 @@
 
 const state = {
   dashboard: null,
+  profiles: [],
+  currentProfile: null,
   patients: [],
   veterinarians: [],
   appointments: [],
@@ -18,6 +20,22 @@ const get = async (url) => {
 const post = async (url, body) => {
   const response = await fetch(url, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error('The request failed.');
+    error.fieldErrors = data.errors || [data.error || 'The request failed.'];
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+};
+
+const patch = async (url, body) => {
+  const response = await fetch(url, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
@@ -86,18 +104,39 @@ function renderPatients(rows = state.patients) {
     </tr>`).join('') || '<tr><td class="empty-state" colspan="5">No patient records match this search.</td></tr>';
 }
 
+function filterPatients(search) {
+  return state.patients.filter((patient) => Object.values(patient)
+    .some((value) => String(value).toLowerCase().includes(search)));
+}
+
 function renderAppointments(rows = state.appointments) {
-  document.querySelector('#appointments-table-body').innerHTML = rows.map((appointment) => `
+  const role = state.currentProfile?.role;
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const canManage = role === 'admin' || role === 'veterinarian';
+  const actionHeading = document.querySelector('.appointment-actions-heading');
+  actionHeading.hidden = !canManage;
+  document.querySelector('#appointments-table-body').innerHTML = rows.map((appointment) => {
+    const canComplete = appointment.date <= todayIso;
+    const actions = appointment.status === 'Scheduled' && canManage
+      ? `<td class="row-actions">${canComplete ? `<button class="table-action" type="button" data-appointment-action="completed" data-id="${appointment.id}">Complete</button>` : ''}
+          ${role === 'admin' ? `<button class="table-action danger-action" type="button" data-appointment-action="cancelled" data-id="${appointment.id}">Cancel</button>` : ''}</td>`
+      : canManage ? '<td></td>' : '';
+    return `
     <tr>
       <td><strong>${prettyDate(appointment.date)}</strong><small>${escapeHtml(appointment.time)}</small></td>
       <td><strong>${escapeHtml(appointment.patient)}</strong><small>${escapeHtml(appointment.owner)}</small></td>
       <td>${escapeHtml(appointment.veterinarian)}</td>
       <td>${escapeHtml(appointment.reason)}</td>
       <td><span class="status ${className(appointment.status)}">${escapeHtml(appointment.status)}</span></td>
-    </tr>`).join('') || '<tr><td class="empty-state" colspan="5">No appointments match this filter.</td></tr>';
+      ${actions}
+    </tr>`;
+  }).join('') || `<tr><td class="empty-state" colspan="${canManage ? 6 : 5}">No appointments match this filter.</td></tr>`;
 }
 
 function renderInvoices(rows = state.invoices) {
+  const isAdmin = state.currentProfile?.role === 'admin';
+  document.querySelector('.invoice-actions-heading').hidden = !isAdmin;
   document.querySelector('#invoices-table-body').innerHTML = rows.map((invoice) => `
     <tr>
       <td><strong>#${escapeHtml(invoice.id)}</strong></td>
@@ -106,7 +145,22 @@ function renderInvoices(rows = state.invoices) {
       <td>${prettyDate(invoice.issued)}</td>
       <td>${money(invoice.amount)}</td>
       <td><span class="status ${className(invoice.status)}">${escapeHtml(invoice.status)}</span></td>
-    </tr>`).join('') || '<tr><td class="empty-state" colspan="6">No invoices match this filter.</td></tr>';
+      ${isAdmin ? `<td class="row-actions">${invoice.status !== 'Paid' ? `<button class="table-action" type="button" data-invoice-action="paid" data-id="${invoice.id}">Mark paid</button>` : ''}</td>` : ''}
+    </tr>`).join('') || `<tr><td class="empty-state" colspan="${isAdmin ? 7 : 6}">No invoices match this filter.</td></tr>`;
+}
+
+function renderProfile() {
+  const profile = state.currentProfile;
+  if (!profile) return;
+  document.querySelector('#profile-avatar').textContent = profile.initials;
+  document.querySelector('#profile-name').textContent = profile.name;
+  document.querySelector('#profile-title').textContent = profile.title;
+  document.querySelector('#profile-select').value = profile.id;
+  document.querySelectorAll('.admin-only').forEach((element) => {
+    element.hidden = profile.role !== 'admin';
+  });
+  renderAppointments(filterRows(state.appointments, document.querySelector('#appointment-filter').value));
+  renderInvoices(filterRows(state.invoices, document.querySelector('#invoice-filter').value));
 }
 
 function showView(view) {
@@ -151,6 +205,9 @@ function showError(error) {
 const dialog = document.querySelector('#booking-dialog');
 const bookingForm = document.querySelector('#booking-form');
 const bookingError = document.querySelector('#booking-error');
+const patientDialog = document.querySelector('#patient-dialog');
+const patientForm = document.querySelector('#patient-form');
+const patientError = document.querySelector('#patient-error');
 
 function resetBookingForm() {
   bookingForm.reset();
@@ -198,9 +255,7 @@ async function submitBooking(event) {
   try {
     await post('/api/appointments', payload);
     closeBookingDialog();
-    state.appointments = await get('/api/appointments');
-    renderAppointments(filterRows(state.appointments,
-      document.querySelector('#appointment-filter').value));
+    await refreshData();
     const pretty = new Date(`${payload.date}T12:00:00`)
       .toLocaleDateString('en', { month: 'short', day: 'numeric' });
     toast(`Appointment booked for ${pretty} at ${payload.time}.`);
@@ -214,12 +269,81 @@ async function submitBooking(event) {
   }
 }
 
+function openPatientDialog() {
+  patientForm.reset();
+  patientError.hidden = true;
+  patientError.textContent = '';
+  patientDialog.showModal();
+  document.querySelector('#patient-name').focus();
+}
+
+function closePatientDialog() {
+  patientDialog.close();
+  patientForm.reset();
+  patientError.hidden = true;
+  patientError.textContent = '';
+}
+
+async function submitPatient(event) {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(patientForm).entries());
+  for (const [field, value] of Object.entries(payload)) payload[field] = String(value).trim();
+
+  try {
+    const patient = await post('/api/patients', payload);
+    await refreshData();
+    closePatientDialog();
+    toast(`${patient.name} added to the patient register.`);
+  } catch (error) {
+    if (error.status) {
+      patientError.textContent = error.fieldErrors.join(' ');
+      patientError.hidden = false;
+    } else {
+      showError(error);
+    }
+  }
+}
+
+async function updateAppointment(id, status) {
+  try {
+    await patch(`/api/appointments/${id}`, { status });
+    await refreshData();
+    toast(`Appointment marked ${status}.`);
+  } catch (error) {
+    if (error.status) toast(error.fieldErrors.join(' '));
+    else showError(error);
+  }
+}
+
+async function updateInvoice(id) {
+  try {
+    await patch(`/api/invoices/${id}`, { status: 'Paid' });
+    await refreshData();
+    toast(`Invoice #${id} marked paid.`);
+  } catch (error) {
+    if (error.status) toast(error.fieldErrors.join(' '));
+    else showError(error);
+  }
+}
+
 const filterRows = (rows, value) => {
   const status = String(value || 'all').toLowerCase();
   return status === 'all' ? rows : rows.filter((row) => row.status.toLowerCase() === status);
 };
 
-
+async function refreshData() {
+  const [dashboard, patients, appointments, invoices] = await Promise.all([
+    get('/api/dashboard'), get('/api/patients'), get('/api/appointments'), get('/api/invoices')
+  ]);
+  state.dashboard = dashboard;
+  state.patients = patients;
+  state.appointments = appointments;
+  state.invoices = invoices;
+  renderDashboard();
+  renderPatients(filterPatients(document.querySelector('#patient-search').value.trim().toLowerCase()));
+  renderAppointments(filterRows(state.appointments, document.querySelector('#appointment-filter').value));
+  renderInvoices(filterRows(state.invoices, document.querySelector('#invoice-filter').value));
+}
 
 // --- Data loading ---------------------------------------------------------
 
@@ -229,17 +353,23 @@ async function start() {
   }).format(new Date());
 
   try {
-    const [dashboard, patients, veterinarians, appointments, invoices] = await Promise.all([
-      get('/api/dashboard'), get('/api/patients'), get('/api/veterinarians'),
+    const [dashboard, profiles, patients, veterinarians, appointments, invoices] = await Promise.all([
+      get('/api/dashboard'), get('/api/profiles'), get('/api/patients'), get('/api/veterinarians'),
       get('/api/appointments'), get('/api/invoices')
     ]);
     state.dashboard = dashboard;
+    state.profiles = profiles;
+    state.currentProfile = profiles.find((profile) => profile.id === 'vet-hannibal');
     state.patients = patients;
     state.veterinarians = veterinarians;
     state.appointments = appointments;
     state.invoices = invoices;
 
     renderDashboard();
+    document.querySelector('#profile-select').innerHTML = profiles.map((profile) =>
+      `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)} · ${escapeHtml(profile.title)}</option>`
+    ).join('');
+    renderProfile();
     renderPatients();
     renderAppointments();
     renderInvoices();
@@ -250,15 +380,19 @@ async function start() {
 
 // --- Event wiring ---------------------------------------------------------
 
-document.addEventListener('click', (event) => {
+document.addEventListener('click', async (event) => {
   if (!(event.target instanceof Element)) return;
   const nav = event.target.closest('[data-view]');
   const target = event.target.closest('[data-view-target]');
+  const appointmentAction = event.target.closest('[data-appointment-action]');
+  const invoiceAction = event.target.closest('[data-invoice-action]');
   if (nav) {
     event.preventDefault();
     showView(nav.dataset.view);
   }
   if (target) showView(target.dataset.viewTarget);
+  if (appointmentAction) await updateAppointment(appointmentAction.dataset.id, appointmentAction.dataset.appointmentAction);
+  if (invoiceAction) await updateInvoice(invoiceAction.dataset.id);
 });
 
 document.querySelector('#menu-button').addEventListener('click', (event) => {
@@ -269,6 +403,13 @@ document.querySelector('#menu-button').addEventListener('click', (event) => {
 });
 
 document.querySelector('#new-appointment-button').addEventListener('click', openBookingDialog);
+document.querySelector('#new-patient-button').addEventListener('click', openPatientDialog);
+document.querySelector('#patient-dismiss').addEventListener('click', closePatientDialog);
+document.querySelector('#patient-cancel').addEventListener('click', closePatientDialog);
+patientForm.addEventListener('submit', submitPatient);
+patientDialog.addEventListener('click', (event) => {
+  if (event.target === patientDialog) closePatientDialog();
+});
 document.querySelector('#booking-dismiss').addEventListener('click', closeBookingDialog);
 document.querySelector('#booking-cancel').addEventListener('click', closeBookingDialog);
 bookingForm.addEventListener('submit', submitBooking);
@@ -277,10 +418,14 @@ dialog.addEventListener('click', (event) => {
   if (event.target === dialog) closeBookingDialog();
 });
 
+document.querySelector('#profile-select').addEventListener('change', (event) => {
+  state.currentProfile = state.profiles.find((profile) => profile.id === event.currentTarget.value);
+  renderProfile();
+});
+
 document.querySelector('#patient-search').addEventListener('input', (event) => {
   const search = event.currentTarget.value.trim().toLowerCase();
-  renderPatients(state.patients.filter((patient) => Object.values(patient)
-    .some((value) => String(value).toLowerCase().includes(search))));
+  renderPatients(filterPatients(search));
 });
 
 document.querySelector('#appointment-filter').addEventListener('change', (event) => {
@@ -292,4 +437,3 @@ document.querySelector('#invoice-filter').addEventListener('change', (event) => 
 });
 
 start();
-

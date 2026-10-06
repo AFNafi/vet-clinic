@@ -9,8 +9,8 @@ database is used by the demo.
 
 ```text
 server.js          Express app: static files, /api router, JSON 404 for unknown API paths
-routes/api.js      Demo endpoints: /api/dashboard, /api/patients, /api/veterinarians,
-                   /api/appointments (GET + POST), /api/invoices, /api/overview
+routes/api.js      Demo endpoints for dashboard, profiles, patients, veterinarians,
+                   appointments, invoices, and the clinic overview
 data/clinic.js     In-memory fictional records (no real personal data)
 public/index.html  Single-page layout: dashboard, patients, appointments, billing views
 public/js/main.js  Front-end module: fetches the API and renders each view
@@ -36,12 +36,22 @@ uncommitted `web/.env` file to use a different port. The example is `web/.env.ex
 - **New appointment** opens a dialog that posts to `POST /api/appointments`. Try a missing field
   (validation errors), or double-booking the same veterinarian, date, and time (a 409 conflict).
 - The patients view has a live search box; appointments and billing have status filters.
+- Use the **Demo profile** selector to switch between the veterinarian and clinic administrator.
+- The administrator can register patients, cancel appointments, and mark invoices paid.
+- The veterinarian can complete today's scheduled appointments. Future visits cannot be completed.
+- These profiles demonstrate role-aware UI only. The API has no authentication or authorization
+  and must not be exposed as a real multi-user clinic system.
 - Unknown `/api/...` paths return `404 {"error":"Not found"}` instead of the HTML page.
 
 Run `node check_dom.js` after changing the markup or the front-end script to confirm every
 element reference still exists. Run `npm test` to test the page, API routes, filtering, search,
-appointment booking, conflicts, input validation, and JSON error responses. The test server binds
-to an ephemeral local port and does not need a running clinic server or Oracle database.
+demo profiles, patient registration, appointment booking and status transitions, invoice payments,
+input validation, and JSON error responses. The test server binds to an ephemeral local port and
+does not need a running clinic server or Oracle database.
+
+The API supports `GET /api/profiles`, `POST /api/patients`,
+`PATCH /api/appointments/:id` (`Completed` or `Cancelled`), and
+`PATCH /api/invoices/:id` (`Paid`). All changes update the in-memory demo records.
 
 ## Security note
 

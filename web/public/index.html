@@ -35,8 +35,17 @@
           </button>
         </nav>
         <div class="sidebar-footer">
-          <div class="staff-avatar" aria-hidden="true">HL</div>
-          <div><strong>Dr. Hannibal Lecter</strong><small>Lead veterinarian</small></div>
+          <div class="staff-avatar" id="profile-avatar" aria-hidden="true">HL</div>
+          <div class="profile-details">
+            <strong id="profile-name">Dr. Hannibal Lecter</strong>
+            <small id="profile-title">Lead veterinarian</small>
+            <label class="profile-select-label">Demo profile
+              <select id="profile-select" aria-label="Switch demo profile">
+                <option value="vet-hannibal">Dr. Hannibal Lecter</option>
+                <option value="admin-jordan">Jordan Ellis · Admin</option>
+              </select>
+            </label>
+          </div>
         </div>
       </aside>
 
@@ -84,6 +93,7 @@
               <h2 id="patients-heading">Patients</h2>
               <p>Every animal currently registered with the practice.</p>
             </div>
+            <button class="primary-button admin-only" id="new-patient-button" type="button" hidden>Add patient</button>
             <label class="search-field">
               <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/></svg>
               <input id="patient-search" type="search" aria-label="Search patients by name, owner, species or breed" placeholder="Search patient or owner">
@@ -108,7 +118,7 @@
           </div>
           <section class="panel table-panel">
             <div class="table-wrap"><table>
-              <thead><tr><th>Date & time</th><th>Patient</th><th>Veterinarian</th><th>Reason</th><th>Status</th></tr></thead>
+              <thead><tr><th>Date & time</th><th>Patient</th><th>Veterinarian</th><th>Reason</th><th>Status</th><th class="appointment-actions-heading" hidden>Actions</th></tr></thead>
               <tbody id="appointments-table-body"></tbody>
             </table></div>
           </section>
@@ -125,13 +135,35 @@
           </div>
           <section class="panel table-panel">
             <div class="table-wrap"><table>
-              <thead><tr><th>Invoice</th><th>Patient</th><th>Owner</th><th>Issued</th><th>Amount</th><th>Status</th></tr></thead>
+              <thead><tr><th>Invoice</th><th>Patient</th><th>Owner</th><th>Issued</th><th>Amount</th><th>Status</th><th class="admin-only invoice-actions-heading" hidden>Actions</th></tr></thead>
               <tbody id="invoices-table-body"></tbody>
             </table></div>
           </section>
         </section>
       </main>
     </div>
+
+    <dialog class="booking-dialog" id="patient-dialog" aria-labelledby="patient-dialog-title">
+      <form class="booking-form" id="patient-form" novalidate>
+        <header class="dialog-heading">
+          <div><p class="eyebrow">Patient register</p><h2 id="patient-dialog-title">Add patient</h2></div>
+          <button class="icon-button" type="button" id="patient-dismiss" aria-label="Close dialog">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></svg>
+          </button>
+        </header>
+        <p class="form-error" id="patient-error" role="alert" hidden></p>
+        <div class="form-grid">
+          <label>Patient name<input id="patient-name" name="name" type="text" maxlength="60" required></label>
+          <label>Species<input id="patient-species" name="species" type="text" maxlength="40" placeholder="Dog, cat, rabbit..." required></label>
+          <label>Breed<input id="patient-breed" name="breed" type="text" maxlength="60" required></label>
+          <label>Owner name<input id="patient-owner" name="owner" type="text" maxlength="80" required></label>
+        </div>
+        <footer class="dialog-actions">
+          <button class="ghost-button" type="button" id="patient-cancel">Cancel</button>
+          <button class="primary-button" type="submit">Save patient</button>
+        </footer>
+      </form>
+    </dialog>
 
     <dialog class="booking-dialog" id="booking-dialog" aria-labelledby="booking-dialog-title">
       <form class="booking-form" id="booking-form" novalidate>

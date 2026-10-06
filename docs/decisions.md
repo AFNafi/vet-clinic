@@ -106,6 +106,14 @@ The visual direction was informed by the task-focused, clinician-centered presen
 2026-10-06. These were used only as high-level references for clarity and workflow readability;
 their branding, assets, and product UI were not copied.
 
+## 2026-10-06: Add role-aware demo management workflows without implying authentication
+
+The web demo includes separate veterinarian and administrator profiles, patient registration,
+scheduled-appointment completion/cancellation, and invoice payment actions. These actions update
+the same in-memory data used by the dashboard, lists, and booking form. Profile selection only
+controls the demonstration UI; it is not authentication or authorization. A real deployment must
+add server-side identity, role checks, and persistent storage before exposing these mutations.
+
 ## 2026-10-06: Booking dates and times are validated as real calendar values
 
 A regular expression only checks shape, so `2026-13-45` and `25:99` passed the first version of

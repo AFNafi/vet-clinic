@@ -31,6 +31,12 @@ const postAppointment = (payload) => fetch(`${baseUrl}/api/appointments`, {
   body: JSON.stringify(payload)
 });
 
+const patchRecord = (path, payload) => fetch(`${baseUrl}${path}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload)
+});
+
 const dateFromToday = (daysAhead) => {
   const date = new Date();
   date.setHours(12, 0, 0, 0);
@@ -88,6 +94,40 @@ test('returns searchable records and status-filtered lists', async () => {
   assert.ok(unpaid.every((invoice) => invoice.status === 'Unpaid'));
 });
 
+test('provides separate veterinarian and administrator demo profiles', async () => {
+  const response = await get('/api/profiles');
+  assert.equal(response.status, 200);
+  const profiles = await response.json();
+  assert.deepEqual(profiles.map(({ role }) => role), ['veterinarian', 'admin']);
+  assert.ok(profiles.some((profile) => profile.name === 'Dr. Hannibal Lecter'));
+});
+
+test('registers patients and validates required details', async () => {
+  const response = await fetch(`${baseUrl}/api/patients`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Maple',
+      species: 'Dog',
+      breed: 'Mixed breed',
+      owner: 'Jamie Park'
+    })
+  });
+  assert.equal(response.status, 201);
+  const patient = await response.json();
+  assert.equal(patient.name, 'Maple');
+  assert.equal(patient.status, 'Active');
+  assert.equal(patient.lastVisit, dateFromToday(0));
+
+  const invalid = await fetch(`${baseUrl}/api/patients`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: '', species: '', breed: '', owner: '' })
+  });
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).errors.length, 4);
+});
+
 test('books a valid appointment and rejects a duplicate time slot', async () => {
   const payload = {
     patientId: 1,
@@ -140,6 +180,40 @@ test('rejects invalid booking fields and dates in the past', async () => {
   });
   assert.equal(longReasonResponse.status, 400);
   assert.match((await longReasonResponse.json()).errors[0], /120 characters or fewer/);
+});
+
+test('updates scheduled visits and rejects invalid appointment transitions', async () => {
+  const futureVisit = await patchRecord('/api/appointments/67', { status: 'Completed' });
+  assert.equal(futureVisit.status, 409);
+
+  const completed = await patchRecord('/api/appointments/61', { status: 'Completed' });
+  assert.equal(completed.status, 200);
+  assert.equal((await completed.json()).status, 'Completed');
+
+  const duplicate = await patchRecord('/api/appointments/61', { status: 'Cancelled' });
+  assert.equal(duplicate.status, 409);
+
+  const cancelled = await patchRecord('/api/appointments/62', { status: 'Cancelled' });
+  assert.equal(cancelled.status, 200);
+  assert.equal((await cancelled.json()).status, 'Cancelled');
+
+  const missing = await patchRecord('/api/appointments/9999', { status: 'Completed' });
+  assert.equal(missing.status, 404);
+});
+
+test('marks an open invoice paid and rejects repeated or unsupported transitions', async () => {
+  const paid = await patchRecord('/api/invoices/1043', { status: 'Paid' });
+  assert.equal(paid.status, 200);
+  assert.equal((await paid.json()).status, 'Paid');
+
+  const duplicate = await patchRecord('/api/invoices/1043', { status: 'Paid' });
+  assert.equal(duplicate.status, 409);
+
+  const unsupported = await patchRecord('/api/invoices/1042', { status: 'Unpaid' });
+  assert.equal(unsupported.status, 400);
+
+  const missing = await patchRecord('/api/invoices/9999', { status: 'Paid' });
+  assert.equal(missing.status, 404);
 });
 
 test('returns JSON errors for unknown API routes and malformed JSON', async () => {
