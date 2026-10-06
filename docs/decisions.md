@@ -93,7 +93,8 @@ The dashboard keeps its existing navigation, API requests, filters, search, and 
 styles use a clearer visual hierarchy, more responsive layouts, restrained motion, and reduced
 motion support. The booking action remains visible on small screens, where the previous layout
 hid it. A later visual pass added a small dialog entrance transition and sticky table headings to
-make long lists easier to scan.
+make long lists easier to scan. The console now uses a dark color palette, including readable
+table, status, alert, form, and dialog surfaces.
 
 The visual direction was informed by the task-focused, clinician-centered presentation on
 [Shepherd](https://www.shepherd.vet/) and [Vetspire](https://www.vetspire.ai/), checked on
