@@ -93,11 +93,14 @@ The dashboard keeps its existing navigation, API requests, filters, search, and 
 styles use a clearer visual hierarchy, more responsive layouts, restrained motion, and reduced
 motion support. The booking action remains visible on small screens, where the previous layout
 hid it. A later visual pass added a small dialog entrance transition and sticky table headings to
-make long lists easier to scan. The console now uses a dark, Liquid Glass-inspired palette with translucent surfaces,
-backdrop blur, fine highlights, and readable table, status, alert, form, and dialog surfaces.
-The treatment follows Apple's high-level Liquid Glass guidance for layered material and
-context-aware translucency, with a solid-surface fallback for reduced-transparency settings
-and browsers without backdrop-filter support. No Apple branding or assets are used.
+make long lists easier to scan. The console now uses a dark, Golden Gate-inspired Liquid Glass palette: warm sunset gold and
+bridge-coral accents sit over cool bay-blue glass, with layered surfaces, backdrop blur, and fine
+highlights. Interface typography uses the native system font stack, so the page no longer needs
+remote font downloads. The treatment follows Apple's high-level Liquid Glass guidance for layered
+material and context-aware translucency, with a solid-surface fallback for reduced-transparency
+settings and browsers without backdrop-filter support. The named macOS 27 Golden Gate reference
+was not independently verifiable in public search, so the colors are an original interpretation
+of its name rather than a claim of pixel-matched system UI. No Apple branding or assets are used.
 
 The visual direction was informed by the task-focused, clinician-centered presentation on
 [Shepherd](https://www.shepherd.vet/) and [Vetspire](https://www.vetspire.ai/), checked on
