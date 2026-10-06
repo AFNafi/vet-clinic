@@ -79,13 +79,13 @@ Two layout defects were fixed in `web/public/styles.css`:
   whole page wider than the viewport. It now sets `min-width: 0`, which lets the tables scroll
   inside `.table-wrap` instead of overflowing the page.
 
-## 2026-10-06: The console loads one dashboard payload from the API
+## 2026-10-06: Keep dashboard navigation distinct from the full schedule
 
-`index.html` renders four areas that need data: stat cards, upcoming visits, alert cards, and the
-clinic facts panel. Rather than four small requests, `GET /api/dashboard` returns all of them in
-one JSON object (`stats`, `upcoming`, `alerts`, `clinic`), derived from the same in-memory records
-that back the other routes. The page still fetches patients, veterinarians, appointments, and
-invoices separately because those lists are re-rendered by their own views and filters.
+The dashboard is a compact overview: informational metrics, a selectable seven-day appointment
+preview, and clinic facts. The Appointments navigation item is the single entry to the full
+schedule. Duplicate "See all" links, schedule alert shortcuts, and metric-card navigation were
+removed so each dashboard control has one clear purpose. `GET /api/dashboard` returns `stats`,
+`upcoming`, and `clinic`; detailed records remain available from their dedicated views.
 
 ## 2026-10-06: Refresh the console appearance without changing its features
 

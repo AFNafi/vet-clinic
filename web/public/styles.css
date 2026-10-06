@@ -274,7 +274,7 @@ h2 { margin-bottom: 0; font-size: 25px; line-height: 1.16; }
   gap: 22px;
 }
 
-.panel, .clinic-card, .alert-card {
+.panel, .clinic-card {
   border: 1px solid rgba(24, 51, 45, .04);
   border-radius: var(--radius-card);
   background: var(--panel);
@@ -283,8 +283,6 @@ h2 { margin-bottom: 0; font-size: 25px; line-height: 1.16; }
 
 .panel { padding: 25px; }
 .panel-heading, .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
-.text-button { padding: 5px 0; border: 0; color: var(--forest); background: transparent; font-size: 13px; font-weight: 700; }
-.text-button:hover, .alert-card button:hover { color: #31866e; }
 .schedule-list { margin-top: 20px; }
 
 .schedule-item {
@@ -313,8 +311,6 @@ h2 { margin-bottom: 0; font-size: 25px; line-height: 1.16; }
   white-space: nowrap;
 }
 
-.alerts-column { display: grid; align-content: start; gap: 13px; }
-
 .clinic-card {
   padding: 22px;
   background:
@@ -326,13 +322,6 @@ h2 { margin-bottom: 0; font-size: 25px; line-height: 1.16; }
 .clinic-facts { display: grid; gap: 12px; margin: 20px 0 0; }
 .clinic-facts dt { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .clinic-facts dd { margin: 4px 0 0; color: var(--ink); font-size: 13px; line-height: 1.45; }
-
-.alert-list { display: grid; gap: 12px; }
-.alert-card { padding: 17px 19px; border-left: 4px solid var(--lime); transition: box-shadow .18s ease, transform .18s ease; }
-.alert-card:hover { box-shadow: var(--shadow-raised); transform: translateY(-2px); }
-.alert-card h3 { margin: 0 0 7px; font-size: 14px; }
-.alert-card p { margin: 0 0 11px; color: var(--muted); font-size: 12px; line-height: 1.55; }
-.alert-card button { padding: 0; border: 0; color: var(--forest); background: transparent; font-size: 12px; font-weight: 700; }
 
 .view { display: none; }
 .view.active { display: block; animation: fade-in .25s ease both; }
@@ -513,8 +502,6 @@ td small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px
   .topbar > div:nth-child(2) { flex: 1; min-width: 0; }
   .topbar-actions { flex: 0 0 auto; }
   .dashboard-grid { grid-template-columns: 1fr; }
-  .alerts-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .clinic-card { grid-row: span 2; }
 }
 
 @media (max-width: 600px) {
@@ -534,8 +521,6 @@ td small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px
   .schedule-item { grid-template-columns: 54px minmax(0, 1fr); gap: 11px; padding: 13px 0; }
   .schedule-item .chip { grid-column: 2; justify-self: start; margin-top: -5px; }
   .schedule-item p { font-size: 11px; }
-  .alerts-column { grid-template-columns: 1fr; }
-  .clinic-card { grid-row: auto; }
   .section-heading { align-items: stretch; flex-direction: column; gap: 15px; margin-bottom: 16px; }
   .section-heading h2 { font-size: 28px; }
   .search-field, .select-field { width: 100%; min-width: 0; }
@@ -661,7 +646,7 @@ h2 { letter-spacing: -.035em; }
   background: rgba(36, 52, 69, .52);
 }
 
-.stat-card, .panel, .clinic-card, .alert-card, .search-field, .select-field,
+.stat-card, .panel, .clinic-card, .search-field, .select-field,
 .menu-button, .ghost-button, .booking-dialog {
   border-color: rgba(222, 237, 252, .15);
   background-color: var(--panel);
@@ -677,7 +662,7 @@ h2 { letter-spacing: -.035em; }
 .stat-card.green { --card-tone: #8fdbb5; --card-wash: rgba(67, 158, 119, .2); }
 .stat-card.orange { --card-tone: #f2bd83; --card-wash: rgba(187, 118, 67, .18); }
 .stat-card.purple { --card-tone: #bba9f1; --card-wash: rgba(120, 99, 177, .2); }
-.stat-card:hover, .alert-card:hover { box-shadow: var(--shadow-raised); }
+.stat-card:hover { box-shadow: var(--shadow-raised); }
 
 .panel { border-radius: var(--radius-card); }
 .clinic-card {
@@ -687,9 +672,7 @@ h2 { letter-spacing: -.035em; }
 }
 .clinic-card .eyebrow, .clinic-facts dt { color: #b5c3d0; }
 .clinic-card h2, .clinic-facts dd { color: #f1f5f8; }
-.alert-card { border-left-color: rgba(151, 225, 194, .78); }
-.schedule-time, .text-button, .alert-card button { color: #a7e4cb; }
-.text-button:hover, .alert-card button:hover { color: #d0f6e2; }
+.schedule-time { color: #a7e4cb; }
 .chip {
   border-color: rgba(164, 228, 199, .21);
   color: #d2f3e2;
@@ -755,7 +738,7 @@ tbody tr:hover { background: rgba(146, 208, 185, .07); }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .sidebar { background: #14202d; }
-  .stat-card, .panel, .clinic-card, .alert-card, .search-field, .select-field, .menu-button, .ghost-button, th {
+  .stat-card, .panel, .clinic-card, .search-field, .select-field, .menu-button, .ghost-button, th {
     background-color: #1b2738;
   }
   .toast { background: #1c2e37; }
@@ -764,7 +747,7 @@ tbody tr:hover { background: rgba(146, 208, 185, .07); }
 
 @media (prefers-reduced-transparency: reduce) {
   .sidebar { background: #14202d; backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .stat-card, .panel, .clinic-card, .alert-card, .search-field, .select-field, .menu-button, .ghost-button, th {
+  .stat-card, .panel, .clinic-card, .search-field, .select-field, .menu-button, .ghost-button, th {
     background-color: #1b2738;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -826,44 +809,7 @@ tbody tr:hover { background: rgba(146, 208, 185, .07); }
   .table-action { padding: 6px 8px; }
 }
 
-.stat-card[data-dashboard-action] {
-  width: 100%;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
 .agenda-controls { margin-top: 20px; }
-.agenda-range {
-  display: flex;
-  width: fit-content;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid rgba(222, 237, 252, .12);
-  border-radius: 999px;
-  background: rgba(7, 14, 25, .34);
-}
-
-.agenda-range button {
-  min-height: 32px;
-  padding: 7px 12px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  color: var(--muted);
-  background: transparent;
-  font-size: 11px;
-  font-weight: 650;
-  transition: color .18s ease, background .18s ease, border-color .18s ease;
-}
-
-.agenda-range button:hover { color: var(--ink); }
-.agenda-range button.active {
-  border-color: rgba(177, 239, 211, .22);
-  color: #dcf8e9;
-  background: linear-gradient(145deg, rgba(120, 190, 164, .2), rgba(102, 130, 160, .13));
-  box-shadow: inset 0 1px rgba(255, 255, 255, .08);
-}
 
 .agenda-timeline {
   display: grid;
@@ -877,37 +823,66 @@ tbody tr:hover { background: rgba(146, 208, 185, .07); }
   min-width: 0;
   justify-items: center;
   gap: 4px;
-  padding: 9px 3px 7px;
-  border: 1px solid transparent;
-  border-radius: 13px;
+  padding: 8px 3px 6px;
+  border: 1px solid rgba(222, 237, 252, .08);
+  border-radius: 10px;
   color: var(--muted);
-  background: rgba(255, 255, 255, .025);
-  transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  background: rgba(255, 255, 255, .018);
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
 }
 
-.agenda-day:hover { color: var(--ink); background: rgba(255, 255, 255, .065); transform: translateY(-2px); }
+.agenda-day:hover { color: var(--ink); background: rgba(255, 255, 255, .05); }
 .agenda-day.selected {
-  border-color: rgba(142, 219, 197, .32);
+  border-color: rgba(142, 219, 197, .38);
   color: #e6fff3;
-  background: linear-gradient(145deg, rgba(89, 160, 137, .2), rgba(86, 111, 150, .12));
-  box-shadow: inset 0 1px rgba(255, 255, 255, .08), 0 5px 15px rgba(0, 0, 0, .12);
+  background: rgba(89, 160, 137, .12);
 }
 
 .agenda-day > span:first-child { font-size: 9px; font-weight: 650; }
 .agenda-day strong { color: inherit; font-size: 13px; font-variant-numeric: tabular-nums; }
 .agenda-day small { color: inherit; font-size: 9px; font-variant-numeric: tabular-nums; }
-.agenda-bar { display: flex; align-items: end; width: 6px; height: 25px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .08); }
-.agenda-bar > span { width: 100%; height: var(--bar-height); border-radius: inherit; background: linear-gradient(180deg, #b4efd8, #6da9d1); }
+.agenda-bar { display: flex; align-items: end; width: 6px; height: 20px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .08); }
+.agenda-bar > span { width: 100%; height: var(--bar-height); border-radius: inherit; background: #8edbc5; }
 .agenda-caption { min-height: 14px; margin: 11px 0 0; color: var(--muted); font-size: 11px; }
 
 @media (max-width: 600px) {
   .agenda-controls { margin-top: 16px; }
-  .agenda-range { width: 100%; justify-content: space-between; }
-  .agenda-range button { flex: 1; padding-right: 7px; padding-left: 7px; font-size: 10px; }
   .agenda-timeline { gap: 3px; margin-top: 11px; }
   .agenda-day { padding-right: 1px; padding-left: 1px; border-radius: 10px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .agenda-day:hover { transform: none; }
+.dashboard-grid { grid-template-columns: minmax(0, 1.55fr) minmax(260px, .8fr); }
+.stat-card, .panel, .clinic-card {
+  border-color: rgba(222, 237, 252, .1);
+  border-radius: 16px;
+  background: rgba(18, 27, 40, .88);
+  background-image: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.stat-card { min-height: 136px; animation: none; }
+.stat-card::before, .stat-card::after { display: none; }
+.stat-card:hover { box-shadow: none; transform: none; }
+.stat-card .stat-label, .stat-card .stat-detail { font-size: 12px; }
+.stat-card strong { margin: 17px 0 8px; font-size: 34px; }
+.stat-card.blue, .stat-card.green, .stat-card.orange, .stat-card.purple {
+  --card-tone: #8edbc5;
+  --card-wash: transparent;
+}
+.dashboard-grid { gap: 16px; }
+.panel { padding: 21px; }
+.clinic-card { padding: 21px; }
+.clinic-card h2 { font-size: 21px; }
+.agenda-timeline { gap: 6px; }
+
+@media (max-width: 820px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .stat-card { min-height: 119px; padding: 16px 14px; }
+  .stat-card strong { margin: 13px 0 7px; font-size: 30px; }
+  .panel, .clinic-card { padding: 18px; }
+  .agenda-timeline { gap: 3px; }
 }

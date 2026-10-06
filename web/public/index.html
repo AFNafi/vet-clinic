@@ -70,27 +70,20 @@
           <div class="dashboard-grid">
             <section class="panel appointments-panel">
               <div class="panel-heading">
-                <div><p class="eyebrow">Today & next</p><h2>Upcoming appointments</h2></div>
-                <button class="text-button" data-view-target="appointments">See all</button>
+                <div><p class="eyebrow">Daily overview</p><h2>Appointments</h2></div>
               </div>
               <div class="agenda-controls">
-                <div class="agenda-range" role="group" aria-label="Appointment date range">
-                  <button type="button" data-dashboard-range="today" aria-pressed="true">Today</button>
-                  <button type="button" data-dashboard-range="week" aria-pressed="false">7 days</button>
-                  <button type="button" data-dashboard-range="all" aria-pressed="false">All upcoming</button>
-                </div>
                 <div class="agenda-timeline" id="agenda-timeline" role="group" aria-label="Appointments by day"></div>
                 <p class="agenda-caption" id="agenda-caption" aria-live="polite"></p>
               </div>
               <div id="upcoming-list" class="schedule-list"></div>
             </section>
-            <section class="alerts-column">
+            <section class="dashboard-side">
               <div class="clinic-card">
                 <p class="eyebrow">Practice</p>
                 <h2 id="clinic-name">Vetwise Clinic</h2>
                 <dl class="clinic-facts" id="clinic-facts"></dl>
               </div>
-              <div id="alert-list" class="alert-list"></div>
             </section>
           </div>
         </section>

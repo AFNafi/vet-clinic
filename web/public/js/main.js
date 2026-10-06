@@ -9,7 +9,6 @@ const state = {
   veterinarians: [],
   appointments: [],
   invoices: [],
-  dashboardRange: 'today',
   dashboardDate: null
 };
 
@@ -67,22 +66,14 @@ const addCalendarDays = (date, days) => {
 const money = (value) => Number(value).toFixed(2);
 
 function renderDashboard() {
-  const { stats, alerts, clinic } = state.dashboard;
+  const { stats, clinic } = state.dashboard;
 
-  document.querySelector('#summary-grid').innerHTML = stats.map((stat) => {
-    const target = {
-      'Visits today': ['appointments', 'scheduled'],
-      'Registered patients': ['patients', ''],
-      'Open invoices': ['billing', 'open']
-    }[stat.label];
-    const content = `
+  document.querySelector('#summary-grid').innerHTML = stats.map((stat) => `
+    <article class="stat-card ${className(stat.tone)}">
       <span class="stat-label">${escapeHtml(stat.label)}</span>
       <strong>${escapeHtml(stat.value)}</strong>
-      <span class="stat-detail">${escapeHtml(stat.detail)}</span>`;
-    return target
-      ? `<button class="stat-card ${className(stat.tone)}" type="button" data-dashboard-action="${target[0]}" data-dashboard-filter="${target[1]}" aria-label="Open ${escapeHtml(stat.label)}">${content}</button>`
-      : `<article class="stat-card ${className(stat.tone)}">${content}</article>`;
-  }).join('');
+      <span class="stat-detail">${escapeHtml(stat.detail)}</span>
+    </article>`).join('');
 
   const today = localIsoDate();
   const futureAppointments = state.appointments
@@ -99,7 +90,7 @@ function renderDashboard() {
     const dateObject = new Date(`${date}T12:00:00`);
     const weekday = new Intl.DateTimeFormat('en', { weekday: 'short' }).format(dateObject);
     const dayNumber = dateObject.getDate();
-    const isSelected = thisAgendaDateIsSelected(date, today);
+    const isSelected = state.dashboardDate === date;
     return `<button type="button" class="agenda-day${isSelected ? ' selected' : ''}" data-agenda-date="${date}" aria-pressed="${isSelected}" aria-label="Show ${weekday}, ${prettyDate(date)}: ${count} ${count === 1 ? 'appointment' : 'appointments'}">
       <span>${escapeHtml(weekday)}</span><strong>${dayNumber}</strong>
       <span class="agenda-bar" aria-hidden="true"><span style="--bar-height:${Math.max(12, count / maxCount * 100)}%"></span></span>
@@ -107,27 +98,12 @@ function renderDashboard() {
     </button>`;
   }).join('');
 
-  const visibleAppointments = futureAppointments.filter((appointment) => {
-    if (state.dashboardRange === 'all') return true;
-    if (state.dashboardRange === 'week') return appointment.date <= days[6].date;
-    const date = state.dashboardRange === 'day' ? state.dashboardDate : today;
-    return appointment.date === date;
-  });
-  document.querySelectorAll('[data-dashboard-range]').forEach((button) => {
-    const active = button.dataset.dashboardRange === state.dashboardRange;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-pressed', String(active));
-  });
-  const rangeDescription = state.dashboardRange === 'today'
-    ? 'today'
-    : state.dashboardRange === 'week'
-      ? 'the next 7 days'
-      : state.dashboardRange === 'day'
-        ? new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' })
-          .format(new Date(`${state.dashboardDate}T12:00:00`))
-        : 'all upcoming days';
+  const selectedDate = state.dashboardDate || today;
+  const visibleAppointments = futureAppointments.filter((appointment) => appointment.date === selectedDate);
+  const selectedDateLabel = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' })
+    .format(new Date(`${selectedDate}T12:00:00`));
   document.querySelector('#agenda-caption').textContent =
-    `${visibleAppointments.length} ${visibleAppointments.length === 1 ? 'appointment' : 'appointments'} ${visibleAppointments.length ? 'for' : 'scheduled for'} ${rangeDescription}`;
+    `${visibleAppointments.length} ${visibleAppointments.length === 1 ? 'appointment' : 'appointments'} · ${selectedDateLabel}`;
   document.querySelector('#upcoming-list').innerHTML = visibleAppointments.map((appointment) => `
     <article class="schedule-item">
       <span class="schedule-time">${escapeHtml(appointment.time)}</span>
@@ -135,13 +111,6 @@ function renderDashboard() {
         <p>${escapeHtml(appointment.reason)} · ${escapeHtml(appointment.veterinarian)}</p></div>
       <span class="chip">${prettyDate(appointment.date)}</span>
     </article>`).join('') || '<p class="empty-state">No upcoming visits booked.</p>';
-
-  document.querySelector('#alert-list').innerHTML = alerts.map((alert) => `
-    <article class="alert-card">
-      <h3>${escapeHtml(alert.title)}</h3>
-      <p>${escapeHtml(alert.text)}</p>
-      <button type="button" data-view-target="${escapeHtml(alert.view)}">${escapeHtml(alert.action)} →</button>
-    </article>`).join('');
 
   document.querySelector('#clinic-name').textContent = clinic.name;
   document.querySelector('#clinic-facts').innerHTML = [
@@ -151,11 +120,6 @@ function renderDashboard() {
     ['Opening hours', clinic.openingHours]
   ].map(([label, value]) => `
     <div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
-}
-
-function thisAgendaDateIsSelected(date, today) {
-  return (state.dashboardRange === 'day' && state.dashboardDate === date) ||
-    (state.dashboardRange === 'today' && date === today);
 }
 
 function renderPatients(rows = state.patients) {
@@ -451,35 +415,14 @@ async function start() {
 document.addEventListener('click', async (event) => {
   if (!(event.target instanceof Element)) return;
   const nav = event.target.closest('[data-view]');
-  const target = event.target.closest('[data-view-target]');
   const appointmentAction = event.target.closest('[data-appointment-action]');
   const invoiceAction = event.target.closest('[data-invoice-action]');
-  const dashboardAction = event.target.closest('[data-dashboard-action]');
-  const dashboardRange = event.target.closest('[data-dashboard-range]');
   const agendaDate = event.target.closest('[data-agenda-date]');
   if (nav) {
     event.preventDefault();
     showView(nav.dataset.view);
   }
-  if (target) showView(target.dataset.viewTarget);
-  if (dashboardAction) {
-    if (dashboardAction.dataset.dashboardAction === 'appointments') {
-      document.querySelector('#appointment-filter').value = dashboardAction.dataset.dashboardFilter;
-      renderAppointments(filterRows(state.appointments, dashboardAction.dataset.dashboardFilter));
-    }
-    if (dashboardAction.dataset.dashboardAction === 'billing') {
-      document.querySelector('#invoice-filter').value = dashboardAction.dataset.dashboardFilter;
-      renderInvoices(filterRows(state.invoices, dashboardAction.dataset.dashboardFilter));
-    }
-    showView(dashboardAction.dataset.dashboardAction);
-  }
-  if (dashboardRange) {
-    state.dashboardRange = dashboardRange.dataset.dashboardRange;
-    state.dashboardDate = localIsoDate();
-    renderDashboard();
-  }
   if (agendaDate) {
-    state.dashboardRange = 'day';
     state.dashboardDate = agendaDate.dataset.agendaDate;
     renderDashboard();
   }

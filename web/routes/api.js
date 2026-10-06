@@ -8,7 +8,6 @@ const router = express.Router();
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK_TIME = /^\d{2}:\d{2}$/;
 const MAX_REASON_LENGTH = 120; // Matches maxlength on the booking form input.
-const pluralize = (count, singular) => count === 1 ? singular : `${singular}s`;
 const validPatientFields = {
   name: ['Patient name', 60],
   species: ['Species', 40],
@@ -49,9 +48,8 @@ router.get('/profiles', (request, response) => {
   response.json(profiles);
 });
 
-// Dashboard summary: four stat cards, the next visits, alert cards, and the
-// clinic facts panel. Everything is derived from the in-memory demo data, so
-// one call gives the page all the information the dashboard view needs.
+// Dashboard summary: four stat cards, the next visits, and clinic facts.
+// Everything is derived from in-memory demo data in one request.
 router.get('/dashboard', (request, response) => {
   const today = toIsoDate(dateFromToday(0));
   const upcoming = appointments
@@ -74,7 +72,7 @@ router.get('/dashboard', (request, response) => {
       {
         label: 'Visits today',
         value: todayCount,
-        detail: `${upcoming.length} upcoming on the board`,
+        detail: 'Select a date to preview visits',
         tone: 'blue'
       },
       {
@@ -97,26 +95,6 @@ router.get('/dashboard', (request, response) => {
       }
     ],
     upcoming,
-    alerts: [
-      {
-        title: 'Vaccinations due',
-        text: `${duePatients.length} ${pluralize(duePatients.length, 'patient')} ${duePatients.length === 1 ? 'needs' : 'need'} a vaccination within the next 30 days.`,
-        action: 'Review patients',
-        view: 'patients'
-      },
-      {
-        title: 'Outstanding billing',
-        text: `${openInvoices.length} ${pluralize(openInvoices.length, 'invoice')} ${openInvoices.length === 1 ? 'is' : 'are'} unpaid or part paid, totalling ${openTotal.toFixed(2)}.`,
-        action: 'Open billing',
-        view: 'billing'
-      },
-      {
-        title: "Today's schedule",
-        text: `${todayCount} ${pluralize(todayCount, 'visit')} ${todayCount === 1 ? 'is' : 'are'} booked for today.`,
-        action: 'See appointments',
-        view: 'appointments'
-      }
-    ],
     clinic
   });
 });

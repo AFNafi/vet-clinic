@@ -32,10 +32,9 @@ uncommitted `web/.env` file to use a different port. The example is `web/.env.ex
 
 ## Try the demo features
 
-- The dashboard loads from `GET /api/dashboard` (stat cards, upcoming visits, alert cards).
-- Dashboard KPI cards link to their relevant records. The appointment agenda can switch between
-  today, the next seven days, and all upcoming visits, or be narrowed to a specific day using the
-  interactive seven-day activity strip.
+- The dashboard loads its stat cards, daily visits, and clinic facts from `GET /api/dashboard`.
+- Select a day on the seven-day agenda strip to inspect that day's visits. Use the Appointments menu
+  for the complete schedule; dashboard stat cards are informational, not duplicate navigation.
 - **New appointment** opens a dialog that posts to `POST /api/appointments`. Try a missing field
   (validation errors), or double-booking the same veterinarian, date, and time (a 409 conflict).
 - The patients view has a live search box; appointments and billing have status filters.

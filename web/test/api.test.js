@@ -52,7 +52,11 @@ test('serves the clinic page and static assets', async () => {
   const page = await get('/');
   assert.equal(page.status, 200);
   assert.match(page.headers.get('content-type'), /text\/html/);
-  assert.match(await page.text(), /Vetwise Clinic/);
+  const html = await page.text();
+  assert.match(html, /Vetwise Clinic/);
+  assert.match(html, /id="agenda-timeline"/);
+  assert.doesNotMatch(html, /data-view-target="appointments"/);
+  assert.doesNotMatch(html, /data-dashboard-range/);
 
   const styles = await get('/styles.css');
   assert.equal(styles.status, 200);
@@ -65,8 +69,8 @@ test('returns dashboard and clinic summary data', async () => {
   const dashboard = await dashboardResponse.json();
   assert.equal(dashboard.stats.length, 4);
   assert.ok(Array.isArray(dashboard.upcoming));
-  assert.ok(Array.isArray(dashboard.alerts));
-  assert.match(dashboard.alerts.find((alert) => alert.title === 'Outstanding billing').text, /^3 invoices are unpaid/);
+  assert.ok(dashboard.clinic);
+  assert.equal('alerts' in dashboard, false);
 
   const overviewResponse = await get('/api/overview');
   assert.equal(overviewResponse.status, 200);
