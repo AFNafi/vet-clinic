@@ -66,6 +66,7 @@ test('returns dashboard and clinic summary data', async () => {
   assert.equal(dashboard.stats.length, 4);
   assert.ok(Array.isArray(dashboard.upcoming));
   assert.ok(Array.isArray(dashboard.alerts));
+  assert.match(dashboard.alerts.find((alert) => alert.title === 'Outstanding billing').text, /^3 invoices are unpaid/);
 
   const overviewResponse = await get('/api/overview');
   assert.equal(overviewResponse.status, 200);

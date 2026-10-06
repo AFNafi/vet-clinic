@@ -73,6 +73,15 @@
                 <div><p class="eyebrow">Today & next</p><h2>Upcoming appointments</h2></div>
                 <button class="text-button" data-view-target="appointments">See all</button>
               </div>
+              <div class="agenda-controls">
+                <div class="agenda-range" role="group" aria-label="Appointment date range">
+                  <button type="button" data-dashboard-range="today" aria-pressed="true">Today</button>
+                  <button type="button" data-dashboard-range="week" aria-pressed="false">7 days</button>
+                  <button type="button" data-dashboard-range="all" aria-pressed="false">All upcoming</button>
+                </div>
+                <div class="agenda-timeline" id="agenda-timeline" role="group" aria-label="Appointments by day"></div>
+                <p class="agenda-caption" id="agenda-caption" aria-live="polite"></p>
+              </div>
               <div id="upcoming-list" class="schedule-list"></div>
             </section>
             <section class="alerts-column">
@@ -131,7 +140,7 @@
               <h2 id="billing-heading">Billing</h2>
               <p>Invoices raised for completed visits.</p>
             </div>
-            <label class="select-field">Show <select id="invoice-filter"><option value="all">All invoices</option><option value="unpaid">Unpaid</option><option value="part paid">Part paid</option><option value="paid">Paid</option></select></label>
+            <label class="select-field">Show <select id="invoice-filter"><option value="all">All invoices</option><option value="open">Open invoices</option><option value="unpaid">Unpaid</option><option value="part paid">Part paid</option><option value="paid">Paid</option></select></label>
           </div>
           <section class="panel table-panel">
             <div class="table-wrap"><table>

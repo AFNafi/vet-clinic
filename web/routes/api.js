@@ -8,6 +8,7 @@ const router = express.Router();
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK_TIME = /^\d{2}:\d{2}$/;
 const MAX_REASON_LENGTH = 120; // Matches maxlength on the booking form input.
+const pluralize = (count, singular) => count === 1 ? singular : `${singular}s`;
 const validPatientFields = {
   name: ['Patient name', 60],
   species: ['Species', 40],
@@ -99,19 +100,19 @@ router.get('/dashboard', (request, response) => {
     alerts: [
       {
         title: 'Vaccinations due',
-        text: `${duePatients.length} patients are due a vaccination within the next 30 days.`,
+        text: `${duePatients.length} ${pluralize(duePatients.length, 'patient')} ${duePatients.length === 1 ? 'needs' : 'need'} a vaccination within the next 30 days.`,
         action: 'Review patients',
         view: 'patients'
       },
       {
         title: 'Outstanding billing',
-        text: `${openInvoices.length} invoices are unpaid or part paid, totalling ${openTotal.toFixed(2)}.`,
+        text: `${openInvoices.length} ${pluralize(openInvoices.length, 'invoice')} ${openInvoices.length === 1 ? 'is' : 'are'} unpaid or part paid, totalling ${openTotal.toFixed(2)}.`,
         action: 'Open billing',
         view: 'billing'
       },
       {
         title: "Today's schedule",
-        text: `${todayCount} visits are booked for today.`,
+        text: `${todayCount} ${pluralize(todayCount, 'visit')} ${todayCount === 1 ? 'is' : 'are'} booked for today.`,
         action: 'See appointments',
         view: 'appointments'
       }

@@ -8,7 +8,9 @@ const state = {
   patients: [],
   veterinarians: [],
   appointments: [],
-  invoices: []
+  invoices: [],
+  dashboardRange: 'today',
+  dashboardDate: null
 };
 
 const get = async (url) => {
@@ -56,19 +58,77 @@ const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => (
 const className = (value) => String(value).toLowerCase().replace(/[^a-z]+/g, '-');
 const prettyDate = (value) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
   .format(new Date(`${value}T12:00:00`));
+const localIsoDate = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const addCalendarDays = (date, days) => {
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+  return result;
+};
 const money = (value) => Number(value).toFixed(2);
 
 function renderDashboard() {
-  const { stats, upcoming, alerts, clinic } = state.dashboard;
+  const { stats, alerts, clinic } = state.dashboard;
 
-  document.querySelector('#summary-grid').innerHTML = stats.map((stat) => `
-    <article class="stat-card ${className(stat.tone)}">
-      <p>${escapeHtml(stat.label)}</p>
+  document.querySelector('#summary-grid').innerHTML = stats.map((stat) => {
+    const target = {
+      'Visits today': ['appointments', 'scheduled'],
+      'Registered patients': ['patients', ''],
+      'Open invoices': ['billing', 'open']
+    }[stat.label];
+    const content = `
+      <span class="stat-label">${escapeHtml(stat.label)}</span>
       <strong>${escapeHtml(stat.value)}</strong>
-      <p>${escapeHtml(stat.detail)}</p>
-    </article>`).join('');
+      <span class="stat-detail">${escapeHtml(stat.detail)}</span>`;
+    return target
+      ? `<button class="stat-card ${className(stat.tone)}" type="button" data-dashboard-action="${target[0]}" data-dashboard-filter="${target[1]}" aria-label="Open ${escapeHtml(stat.label)}">${content}</button>`
+      : `<article class="stat-card ${className(stat.tone)}">${content}</article>`;
+  }).join('');
 
-  document.querySelector('#upcoming-list').innerHTML = upcoming.map((appointment) => `
+  const today = localIsoDate();
+  const futureAppointments = state.appointments
+    .filter((appointment) => appointment.status === 'Scheduled' && appointment.date >= today)
+    .sort((first, second) => `${first.date}T${first.time}`.localeCompare(`${second.date}T${second.time}`));
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = localIsoDate(addCalendarDays(new Date(), index));
+    const count = futureAppointments.filter((appointment) => appointment.date === date).length;
+    return { date, count };
+  });
+  const maxCount = Math.max(1, ...days.map((day) => day.count));
+
+  document.querySelector('#agenda-timeline').innerHTML = days.map(({ date, count }) => {
+    const dateObject = new Date(`${date}T12:00:00`);
+    const weekday = new Intl.DateTimeFormat('en', { weekday: 'short' }).format(dateObject);
+    const dayNumber = dateObject.getDate();
+    const isSelected = thisAgendaDateIsSelected(date, today);
+    return `<button type="button" class="agenda-day${isSelected ? ' selected' : ''}" data-agenda-date="${date}" aria-pressed="${isSelected}" aria-label="Show ${weekday}, ${prettyDate(date)}: ${count} ${count === 1 ? 'appointment' : 'appointments'}">
+      <span>${escapeHtml(weekday)}</span><strong>${dayNumber}</strong>
+      <span class="agenda-bar" aria-hidden="true"><span style="--bar-height:${Math.max(12, count / maxCount * 100)}%"></span></span>
+      <small>${count}</small>
+    </button>`;
+  }).join('');
+
+  const visibleAppointments = futureAppointments.filter((appointment) => {
+    if (state.dashboardRange === 'all') return true;
+    if (state.dashboardRange === 'week') return appointment.date <= days[6].date;
+    const date = state.dashboardRange === 'day' ? state.dashboardDate : today;
+    return appointment.date === date;
+  });
+  document.querySelectorAll('[data-dashboard-range]').forEach((button) => {
+    const active = button.dataset.dashboardRange === state.dashboardRange;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+  const rangeDescription = state.dashboardRange === 'today'
+    ? 'today'
+    : state.dashboardRange === 'week'
+      ? 'the next 7 days'
+      : state.dashboardRange === 'day'
+        ? new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' })
+          .format(new Date(`${state.dashboardDate}T12:00:00`))
+        : 'all upcoming days';
+  document.querySelector('#agenda-caption').textContent =
+    `${visibleAppointments.length} ${visibleAppointments.length === 1 ? 'appointment' : 'appointments'} ${visibleAppointments.length ? 'for' : 'scheduled for'} ${rangeDescription}`;
+  document.querySelector('#upcoming-list').innerHTML = visibleAppointments.map((appointment) => `
     <article class="schedule-item">
       <span class="schedule-time">${escapeHtml(appointment.time)}</span>
       <div><strong>${escapeHtml(appointment.patient)}</strong>
@@ -91,6 +151,11 @@ function renderDashboard() {
     ['Opening hours', clinic.openingHours]
   ].map(([label, value]) => `
     <div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
+}
+
+function thisAgendaDateIsSelected(date, today) {
+  return (state.dashboardRange === 'day' && state.dashboardDate === date) ||
+    (state.dashboardRange === 'today' && date === today);
 }
 
 function renderPatients(rows = state.patients) {
@@ -328,6 +393,7 @@ async function updateInvoice(id) {
 
 const filterRows = (rows, value) => {
   const status = String(value || 'all').toLowerCase();
+  if (status === 'open') return rows.filter((row) => row.status.toLowerCase() !== 'paid');
   return status === 'all' ? rows : rows.filter((row) => row.status.toLowerCase() === status);
 };
 
@@ -339,6 +405,7 @@ async function refreshData() {
   state.patients = patients;
   state.appointments = appointments;
   state.invoices = invoices;
+  if (!state.dashboardDate) state.dashboardDate = localIsoDate();
   renderDashboard();
   renderPatients(filterPatients(document.querySelector('#patient-search').value.trim().toLowerCase()));
   renderAppointments(filterRows(state.appointments, document.querySelector('#appointment-filter').value));
@@ -365,6 +432,7 @@ async function start() {
     state.appointments = appointments;
     state.invoices = invoices;
 
+    state.dashboardDate = localIsoDate();
     renderDashboard();
     document.querySelector('#profile-select').innerHTML = profiles.map((profile) =>
       `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)} · ${escapeHtml(profile.title)}</option>`
@@ -386,11 +454,35 @@ document.addEventListener('click', async (event) => {
   const target = event.target.closest('[data-view-target]');
   const appointmentAction = event.target.closest('[data-appointment-action]');
   const invoiceAction = event.target.closest('[data-invoice-action]');
+  const dashboardAction = event.target.closest('[data-dashboard-action]');
+  const dashboardRange = event.target.closest('[data-dashboard-range]');
+  const agendaDate = event.target.closest('[data-agenda-date]');
   if (nav) {
     event.preventDefault();
     showView(nav.dataset.view);
   }
   if (target) showView(target.dataset.viewTarget);
+  if (dashboardAction) {
+    if (dashboardAction.dataset.dashboardAction === 'appointments') {
+      document.querySelector('#appointment-filter').value = dashboardAction.dataset.dashboardFilter;
+      renderAppointments(filterRows(state.appointments, dashboardAction.dataset.dashboardFilter));
+    }
+    if (dashboardAction.dataset.dashboardAction === 'billing') {
+      document.querySelector('#invoice-filter').value = dashboardAction.dataset.dashboardFilter;
+      renderInvoices(filterRows(state.invoices, dashboardAction.dataset.dashboardFilter));
+    }
+    showView(dashboardAction.dataset.dashboardAction);
+  }
+  if (dashboardRange) {
+    state.dashboardRange = dashboardRange.dataset.dashboardRange;
+    state.dashboardDate = localIsoDate();
+    renderDashboard();
+  }
+  if (agendaDate) {
+    state.dashboardRange = 'day';
+    state.dashboardDate = agendaDate.dataset.agendaDate;
+    renderDashboard();
+  }
   if (appointmentAction) await updateAppointment(appointmentAction.dataset.id, appointmentAction.dataset.appointmentAction);
   if (invoiceAction) await updateInvoice(invoiceAction.dataset.id);
 });
