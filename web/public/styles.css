@@ -1,18 +1,18 @@
 :root {
   color-scheme: dark;
-  --ink: #e5eee9;
-  --muted: #a0b3aa;
-  --canvas: #111a17;
-  --panel: #1b2722;
-  --line: #304139;
-  --forest: #23765d;
-  --forest-dark: #1b604b;
-  --mint: #203c31;
+  --ink: #f0f4fa;
+  --muted: #aab8ca;
+  --canvas: #0b1018;
+  --panel: rgba(28, 39, 54, .68);
+  --line: rgba(229, 239, 255, .15);
+  --forest: #39a98d;
+  --forest-dark: #2d8d76;
+  --mint: rgba(55, 111, 94, .35);
   --lime: #d7eb83;
-  --peach: #493526;
-  --lavender: #352e49;
-  --shadow: 0 16px 42px rgba(0, 0, 0, .2);
-  --shadow-raised: 0 20px 48px rgba(0, 0, 0, .34);
+  --peach: rgba(126, 80, 44, .38);
+  --lavender: rgba(91, 75, 135, .4);
+  --shadow: 0 18px 48px rgba(0, 0, 0, .24);
+  --shadow-raised: 0 24px 64px rgba(0, 0, 0, .4);
   --radius-card: 20px;
 }
 
@@ -25,7 +25,9 @@ body {
   margin: 0;
   color: var(--ink);
   background:
-    radial-gradient(ellipse at 82% 0, rgba(94, 139, 93, .13), transparent 34rem),
+    radial-gradient(ellipse at 78% -8%, rgba(65, 127, 153, .2), transparent 34rem),
+    radial-gradient(ellipse at 10% 30%, rgba(71, 91, 153, .13), transparent 29rem),
+    radial-gradient(ellipse at 88% 76%, rgba(47, 126, 103, .12), transparent 32rem),
     var(--canvas);
   font-family: "DM Sans", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -55,8 +57,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   padding: 30px 17px 20px;
   color: #fff;
   background:
-    radial-gradient(ellipse at 0 0, rgba(215, 235, 131, .12), transparent 21rem),
-    linear-gradient(165deg, #1d6654 0%, #154c40 54%, #123f36 100%);
+    radial-gradient(ellipse at 0 0, rgba(123, 194, 166, .14), transparent 21rem),
+    linear-gradient(165deg, rgba(31, 70, 66, .86), rgba(17, 31, 42, .92));
+  border-right: 1px solid rgba(228, 240, 255, .13);
+  backdrop-filter: blur(28px) saturate(145%);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
   box-shadow: 10px 0 32px rgba(19, 64, 54, .08);
 }
 
@@ -555,52 +560,123 @@ td small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px
   }
 }
 
-/* Dark surfaces and semantic colors for every dashboard view and dialog. */
+/* Liquid Glass-inspired translucent surfaces and semantic accents. */
 .sidebar {
   background:
-    radial-gradient(ellipse at 0 0, rgba(215, 235, 131, .08), transparent 21rem),
-    linear-gradient(165deg, #18392f 0%, #142c24 54%, #10231d 100%);
-  box-shadow: 10px 0 32px rgba(0, 0, 0, .2);
+    radial-gradient(ellipse at 0 0, rgba(163, 230, 204, .14), transparent 21rem),
+    linear-gradient(165deg, rgba(27, 55, 58, .76), rgba(15, 25, 37, .84));
+  border-right-color: rgba(235, 246, 255, .14);
+  box-shadow: 10px 0 38px rgba(0, 0, 0, .24), inset -1px 0 rgba(255, 255, 255, .035);
 }
 
 .staff-avatar { color: #17251e; }
-.menu-button { color: #c4e5d5; }
-.primary-button { box-shadow: 0 8px 20px rgba(0, 0, 0, .22); }
-.primary-button:hover { box-shadow: 0 11px 24px rgba(0, 0, 0, .32); }
-.stat-card { border-color: rgba(255, 255, 255, .055); }
-.stat-card.blue { --card-tone: #73bfd4; --card-wash: #213642; }
-.stat-card.green { --card-tone: #79c89d; --card-wash: #20392f; }
-.stat-card.orange { --card-tone: #e9ad70; --card-wash: #3a3027; }
-.stat-card.purple { --card-tone: #b4a0df; --card-wash: #302b3d; }
-.panel, .clinic-card, .alert-card { border-color: rgba(255, 255, 255, .055); }
-.clinic-card {
-  background:
-    radial-gradient(circle at 95% 10%, rgba(215, 235, 131, .1), transparent 9rem),
-    linear-gradient(135deg, #25372d, #242e25);
+.nav-item.active { background: rgba(208, 239, 226, .13); border-color: rgba(224, 246, 236, .2); box-shadow: inset 0 1px rgba(255, 255, 255, .09); }
+.menu-button { color: #d2f3e5; }
+.primary-button {
+  border: 1px solid rgba(207, 255, 238, .28);
+  background: linear-gradient(145deg, rgba(70, 178, 148, .92), rgba(37, 119, 105, .88));
+  box-shadow: 0 8px 24px rgba(10, 49, 47, .34), inset 0 1px rgba(255, 255, 255, .25);
+}
+.primary-button:hover {
+  background: linear-gradient(145deg, rgba(91, 197, 164, .96), rgba(48, 140, 120, .94));
+  box-shadow: 0 12px 30px rgba(10, 49, 47, .42), inset 0 1px rgba(255, 255, 255, .3);
 }
 
-.schedule-time, .text-button { color: #a5dfbe; }
-.text-button:hover, .alert-card button:hover { color: #9cddbd; }
-.chip { color: #c2ead1; background: #203c31; }
-.chip { border-color: #355442; }
-.alert-card button { color: #a4d9bc; }
-.search-field, .select-field { box-shadow: 0 4px 14px rgba(0, 0, 0, .14); }
-.search-field input::placeholder { color: #84978e; }
-.select-field select option { color: var(--ink); background: var(--panel); }
-.table-wrap { scrollbar-color: #53685c transparent; }
-th { color: #adbbb3; background: #202d27; box-shadow: inset 0 -1px var(--line); }
-td { border-top-color: var(--line); }
-tbody tr:hover { background: #23332b; }
-.status { border-color: #355442; color: #c2ead1; background: #203c31; }
-.status.vaccination-due, .status.unpaid { color: #f1c28e; background: #493526; }
-.status.completed, .status.paid { color: #d0c0f1; background: #352e49; }
-.status.part-paid { color: #e1edaa; background: #374128; }
-.load-error, .form-error {
-  border-color: #71463e;
-  color: #ffc4b7;
-  background: #382522;
+.stat-card.blue { --card-tone: #83d8ee; --card-wash: rgba(70, 146, 187, .2); }
+.stat-card.green { --card-tone: #91e2b4; --card-wash: rgba(67, 151, 115, .2); }
+.stat-card.orange { --card-tone: #ffc184; --card-wash: rgba(191, 127, 75, .2); }
+.stat-card.purple { --card-tone: #c8b2ff; --card-wash: rgba(131, 103, 184, .2); }
+.stat-card, .panel, .clinic-card, .alert-card, .search-field, .select-field, .menu-button, .ghost-button, .booking-dialog {
+  border-color: rgba(230, 242, 255, .16);
+  background-color: rgba(29, 41, 57, .64);
+  box-shadow: var(--shadow), inset 0 1px rgba(255, 255, 255, .12);
+  backdrop-filter: blur(22px) saturate(155%);
+  -webkit-backdrop-filter: blur(22px) saturate(155%);
 }
-.booking-dialog { border-color: rgba(255, 255, 255, .1); }
-.booking-dialog::backdrop { background: rgba(3, 10, 7, .72); }
-.icon-button:hover, .ghost-button:hover { background: #27352e; }
-.ghost-button { border-color: var(--line); }
+
+.stat-card {
+  background-image: linear-gradient(145deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .012) 56%);
+}
+
+.panel { background-color: rgba(26, 38, 53, .72); }
+
+.clinic-card {
+  background:
+    radial-gradient(circle at 95% 10%, rgba(164, 219, 145, .19), transparent 9rem),
+    linear-gradient(135deg, rgba(44, 79, 70, .72), rgba(34, 48, 65, .76));
+}
+
+.alert-card { background-color: rgba(28, 40, 56, .72); }
+.schedule-time, .text-button { color: #b4f1d5; }
+.text-button:hover, .alert-card button:hover { color: #d0ffe8; }
+.chip {
+  border-color: rgba(172, 236, 206, .22);
+  color: #d0f6e2;
+  background: rgba(49, 105, 83, .42);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .1);
+}
+
+.alert-card button { color: #b4f1d5; }
+.search-field, .select-field { box-shadow: var(--shadow), inset 0 1px rgba(255, 255, 255, .11); }
+.search-field input::placeholder { color: #a0b0c3; }
+.select-field select option { color: var(--ink); background: var(--panel); }
+.table-wrap { scrollbar-color: rgba(174, 204, 197, .45) transparent; }
+th {
+  color: #d4e1ed;
+  background: rgba(35, 49, 66, .9);
+  box-shadow: inset 0 -1px rgba(229, 239, 255, .18), inset 0 1px rgba(255, 255, 255, .09);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+td { border-top-color: var(--line); }
+tbody tr:hover { background: rgba(139, 196, 174, .09); }
+.status {
+  border-color: rgba(180, 231, 210, .19);
+  color: #d0f6e2;
+  background: rgba(49, 105, 83, .4);
+}
+.status.vaccination-due, .status.unpaid { border-color: rgba(255, 195, 133, .22); color: #ffd3a4; background: rgba(126, 80, 44, .42); }
+.status.completed, .status.paid { border-color: rgba(203, 183, 255, .22); color: #d9caff; background: rgba(91, 75, 135, .42); }
+.status.part-paid { border-color: rgba(218, 237, 151, .22); color: #e6f5ad; background: rgba(84, 101, 47, .42); }
+.load-error, .form-error {
+  border-color: rgba(255, 168, 151, .32);
+  color: #ffd1c6;
+  background: rgba(88, 43, 41, .72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.booking-dialog {
+  border-color: rgba(232, 244, 255, .2);
+  background-color: rgba(27, 39, 54, .88);
+}
+.booking-dialog::backdrop { background: rgba(3, 8, 15, .62); backdrop-filter: blur(12px); }
+.booking-form input, .booking-form select { border-color: rgba(227, 240, 255, .19); background: rgba(11, 19, 29, .54); }
+.icon-button:hover, .ghost-button:hover { background-color: rgba(130, 164, 153, .16); }
+.ghost-button { color: #eff7f2; }
+.toast { border-color: rgba(230, 247, 255, .2); background: rgba(29, 50, 61, .88); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .stat-card, .panel, .clinic-card, .alert-card, .search-field, .select-field, .menu-button,
+  .ghost-button, th {
+    background-color: #1d2939;
+  }
+
+  .load-error, .form-error { background: #582b29; }
+  .booking-dialog { background-color: #1b2736; }
+  .sidebar { background: #17242e; }
+  .toast { background: #1d323d; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .stat-card, .panel, .clinic-card, .alert-card, .search-field, .select-field, .menu-button,
+  .ghost-button, th {
+    background-color: #1d2939;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .load-error, .form-error { background: #582b29; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .booking-dialog, .toast { background-color: #1b2736; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .booking-dialog::backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .sidebar { background: #17242e; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
