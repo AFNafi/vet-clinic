@@ -38,6 +38,8 @@ const veterinarians = [
   { id: 5, name: 'Dr. Omar Haddad', specialty: 'Dermatology' }
 ];
 
+const firstAppointmentDayOffset = dateFromToday(0).getDay() === 0 ? 1 : 0;
+
 const patients = [
   { id: 1, name: 'Daisy', species: 'Dog', breed: 'Golden Retriever', owner: 'Avery Bennett', status: 'Active', lastVisit: toIsoDate(dateFromToday(-14)) },
   { id: 2, name: 'Milo', species: 'Dog', breed: 'Beagle', owner: 'Jordan Ellis', status: 'Active', lastVisit: toIsoDate(dateFromToday(-11)) },
@@ -50,14 +52,14 @@ const patients = [
 ];
 
 const appointments = [
-  { id: 61, date: toIsoDate(dateFromToday(0)), time: '09:00', patientId: 1, patient: 'Daisy', owner: 'Avery Bennett', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Annual wellness exam', status: 'Scheduled' },
-  { id: 62, date: toIsoDate(dateFromToday(0)), time: '10:30', patientId: 2, patient: 'Milo', owner: 'Jordan Ellis', veterinarianId: 2, veterinarian: 'Dr. Theo Martin', reason: 'Ear check', status: 'Scheduled' },
-  { id: 63, date: toIsoDate(dateFromToday(0)), time: '11:15', patientId: 3, patient: 'Juniper', owner: 'Morgan Rivera', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Vaccination visit', status: 'Scheduled' },
-  { id: 64, date: toIsoDate(dateFromToday(0)), time: '13:00', patientId: 4, patient: 'Fig', owner: 'Casey Chen', veterinarianId: 3, veterinarian: 'Dr. Priya Shah', reason: 'Dental check', status: 'Scheduled' },
-  { id: 65, date: toIsoDate(dateFromToday(0)), time: '14:30', patientId: 5, patient: 'Pip', owner: 'Riley Morgan', veterinarianId: 2, veterinarian: 'Dr. Theo Martin', reason: 'Nail trim', status: 'Scheduled' },
-  { id: 66, date: toIsoDate(dateFromToday(0)), time: '15:15', patientId: 6, patient: 'Sunny', owner: 'Sam Patel', veterinarianId: 4, veterinarian: 'Dr. Lena Novak', reason: 'Wing examination', status: 'Scheduled' },
-  { id: 67, date: toIsoDate(dateFromToday(1)), time: '09:00', patientId: 7, patient: 'Otis', owner: 'Taylor Brooks', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Mobility follow-up', status: 'Scheduled' },
-  { id: 68, date: toIsoDate(dateFromToday(1)), time: '10:30', patientId: 8, patient: 'Clover', owner: 'Alexis Kim', veterinarianId: 5, veterinarian: 'Dr. Omar Haddad', reason: 'Skin review', status: 'Scheduled' },
+  { id: 61, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '09:00', patientId: 1, patient: 'Daisy', owner: 'Avery Bennett', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Annual wellness exam', status: 'Scheduled' },
+  { id: 62, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '10:30', patientId: 2, patient: 'Milo', owner: 'Jordan Ellis', veterinarianId: 2, veterinarian: 'Dr. Theo Martin', reason: 'Ear check', status: 'Scheduled' },
+  { id: 63, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '11:15', patientId: 3, patient: 'Juniper', owner: 'Morgan Rivera', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Vaccination visit', status: 'Scheduled' },
+  { id: 64, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '13:00', patientId: 4, patient: 'Fig', owner: 'Casey Chen', veterinarianId: 3, veterinarian: 'Dr. Priya Shah', reason: 'Dental check', status: 'Scheduled' },
+  { id: 65, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '14:30', patientId: 5, patient: 'Pip', owner: 'Riley Morgan', veterinarianId: 2, veterinarian: 'Dr. Theo Martin', reason: 'Nail trim', status: 'Scheduled' },
+  { id: 66, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '15:15', patientId: 6, patient: 'Sunny', owner: 'Sam Patel', veterinarianId: 4, veterinarian: 'Dr. Lena Novak', reason: 'Wing examination', status: 'Scheduled' },
+  { id: 67, date: toIsoDate(dateFromToday(firstAppointmentDayOffset + 1)), time: '09:00', patientId: 7, patient: 'Otis', owner: 'Taylor Brooks', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Mobility follow-up', status: 'Scheduled' },
+  { id: 68, date: toIsoDate(dateFromToday(firstAppointmentDayOffset + 1)), time: '10:30', patientId: 8, patient: 'Clover', owner: 'Alexis Kim', veterinarianId: 5, veterinarian: 'Dr. Omar Haddad', reason: 'Skin review', status: 'Scheduled' },
   { id: 54, date: toIsoDate(dateFromToday(-5)), time: '10:00', patientId: 4, patient: 'Fig', owner: 'Casey Chen', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Routine check-up', status: 'Completed' },
   { id: 55, date: toIsoDate(dateFromToday(-8)), time: '13:00', patientId: 8, patient: 'Clover', owner: 'Alexis Kim', veterinarianId: 3, veterinarian: 'Dr. Priya Shah', reason: 'Wellness exam', status: 'Completed' }
 ];

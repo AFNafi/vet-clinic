@@ -41,8 +41,10 @@ const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => (
 }[character]));
 
 const className = (value) => String(value).toLowerCase().replace(/[^a-z]+/g, '-');
-const prettyDate = (value) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
-  .format(new Date(`${value}T12:00:00`));
+const prettyDate = (value) => value
+  ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
+    .format(new Date(`${value}T12:00:00`))
+  : 'Not yet';
 const localIsoDate = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const addCalendarDays = (date, days) => {
@@ -126,13 +128,12 @@ function filterPatients(search) {
 
 function renderAppointments(rows = state.appointments) {
   const role = state.user?.role;
-  const today = new Date();
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const canManage = role === 'admin' || role === 'veterinarian';
+  const now = new Date();
+  const canManage = role === 'admin';
   const actionHeading = document.querySelector('.appointment-actions-heading');
   actionHeading.hidden = !canManage;
   document.querySelector('#appointments-table-body').innerHTML = rows.map((appointment) => {
-    const canComplete = appointment.date <= todayIso;
+    const canComplete = new Date(`${appointment.date}T${appointment.time}:00`) <= now;
     const actions = appointment.status === 'Scheduled' && canManage
       ? `<td class="row-actions">${canComplete ? `<button class="table-action" type="button" data-appointment-action="completed" data-id="${appointment.id}">Complete</button>` : ''}
           ${role === 'admin' ? `<button class="table-action danger-action" type="button" data-appointment-action="cancelled" data-id="${appointment.id}">Cancel</button>` : ''}</td>`
@@ -178,6 +179,9 @@ function renderProfile() {
 }
 
 function showView(view) {
+  if (['appointments', 'billing'].includes(view) && state.user?.role !== 'admin') {
+    view = 'dashboard';
+  }
   document.querySelectorAll('.view').forEach((section) =>
     section.classList.toggle('active', section.id === `${view}-view`));
   document.querySelectorAll('.nav-item').forEach((button) => {
@@ -238,14 +242,44 @@ function setRegistrationRole(role) {
   specialtyInput.required = !isAdmin;
   const invitation = document.querySelector('#invitation-field');
   const invitationInput = invitation.querySelector('input');
-  invitation.hidden = !isAdmin;
-  invitationInput.required = isAdmin;
+  invitation.hidden = false;
+  invitationInput.required = true;
+  document.querySelector('#invitation-label').textContent =
+    isAdmin ? 'Administrator invitation code' : 'Staff invitation code';
+}
+
+function configureRegistration(options) {
+  const veterinarianOption = document.querySelector('#veterinarian-registration-option');
+  const administratorOption = document.querySelector('#admin-registration-option');
+  veterinarianOption.disabled = !options.veterinarianRegistrationEnabled;
+  administratorOption.disabled = !options.adminRegistrationEnabled;
+  if (veterinarianOption.disabled) veterinarianOption.textContent = 'Veterinarian · staff invite required';
+  else veterinarianOption.textContent = 'Veterinarian';
+  if (administratorOption.disabled) administratorOption.textContent = 'Administrator · invite setup required';
+  else administratorOption.textContent = 'Administrator';
+
+  const roleSelect = document.querySelector('#registration-role');
+  const hasAvailableRole = options.veterinarianRegistrationEnabled || options.adminRegistrationEnabled;
+  roleSelect.disabled = !hasAvailableRole;
+  if (roleSelect.selectedOptions[0]?.disabled) {
+    roleSelect.value = options.adminRegistrationEnabled ? 'admin' : 'veterinarian';
+  }
+  document.querySelector('#register-submit').disabled = !hasAvailableRole;
+
+  const notice = document.querySelector('#registration-notice');
+  notice.hidden = hasAvailableRole;
+  notice.textContent = 'Account creation is disabled until the clinic owner configures private staff invitations.';
+  setRegistrationRole(roleSelect.value);
 }
 
 async function loadClinicData() {
+  const isAdmin = state.user.role === 'admin';
   const [dashboard, patients, veterinarians, appointments, invoices] = await Promise.all([
-    get('/api/dashboard'), get('/api/patients'), get('/api/veterinarians'),
-    get('/api/appointments'), get('/api/invoices')
+    get('/api/dashboard'),
+    get('/api/patients'),
+    get('/api/veterinarians'),
+    isAdmin ? get('/api/appointments') : Promise.resolve([]),
+    isAdmin ? get('/api/invoices') : Promise.resolve([])
   ]);
   state.dashboard = dashboard;
   state.patients = patients;
@@ -312,6 +346,9 @@ function openBookingDialog() {
   const today = new Date();
   document.querySelector('#booking-date').min =
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const bookingTime = document.querySelector('#booking-time');
+  bookingTime.min = '08:00';
+  bookingTime.max = '17:30';
 
   dialog.showModal();
   patientSelect.focus();
@@ -414,8 +451,12 @@ const filterRows = (rows, value) => {
 };
 
 async function refreshData() {
+  const isAdmin = state.user?.role === 'admin';
   const [dashboard, patients, appointments, invoices] = await Promise.all([
-    get('/api/dashboard'), get('/api/patients'), get('/api/appointments'), get('/api/invoices')
+    get('/api/dashboard'),
+    get('/api/patients'),
+    isAdmin ? get('/api/appointments') : Promise.resolve([]),
+    isAdmin ? get('/api/invoices') : Promise.resolve([])
   ]);
   state.dashboard = dashboard;
   state.patients = patients;
@@ -437,11 +478,7 @@ async function start() {
 
   try {
     const [options, session] = await Promise.all([get('/api/auth/options'), get('/api/auth/me')]);
-    const adminOption = document.querySelector('#admin-registration-option');
-    adminOption.disabled = !options.adminRegistrationEnabled;
-    if (!options.adminRegistrationEnabled) {
-      adminOption.textContent = 'Administrator · invite setup required';
-    }
+    configureRegistration(options);
     if (session.user) {
       state.user = session.user;
       await loadClinicData();

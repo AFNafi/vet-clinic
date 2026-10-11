@@ -9,12 +9,15 @@ const scrypt = promisify(crypto.scrypt);
 const accountsPath = process.env.AUTH_STORE_PATH ||
   path.join(__dirname, '..', 'data', 'staff-accounts.json');
 const adminRegistrationCode = process.env.ADMIN_REGISTRATION_CODE || '';
+const veterinarianRegistrationCode = process.env.VETERINARIAN_REGISTRATION_CODE || '';
 const SESSION_COOKIE = 'vetwise_session';
 const SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
 const PASSWORD_BYTES = 64;
 const SCRYPT_OPTIONS = { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 const DUMMY_SALT = Buffer.alloc(16, 83);
 const adminRegistrationEnabled = Buffer.byteLength(adminRegistrationCode, 'utf8') >= 16;
+const veterinarianRegistrationEnabled =
+  Buffer.byteLength(veterinarianRegistrationCode, 'utf8') >= 16;
 
 let accounts = fs.existsSync(accountsPath)
   ? JSON.parse(fs.readFileSync(accountsPath, 'utf8'))
@@ -101,7 +104,7 @@ function initialsFor(name) {
 }
 
 router.get('/options', (request, response) => {
-  response.json({ adminRegistrationEnabled });
+  response.json({ adminRegistrationEnabled, veterinarianRegistrationEnabled });
 });
 
 router.get('/me', (request, response) => {
@@ -135,6 +138,13 @@ router.post('/register', rateLimit, async (request, response) => {
     const submittedCode = String(body.invitationCode || '');
     if (!adminRegistrationEnabled || !safeEqual(submittedCode, adminRegistrationCode)) {
       return response.status(403).json({ errors: ['A valid administrator invitation code is required.'] });
+    }
+  }
+  if (role === 'veterinarian') {
+    const submittedCode = String(body.invitationCode || '');
+    if (!veterinarianRegistrationEnabled ||
+        !safeEqual(submittedCode, veterinarianRegistrationCode)) {
+      return response.status(403).json({ errors: ['A valid staff invitation code is required.'] });
     }
   }
   if (errors.length) return response.status(400).json({ errors });

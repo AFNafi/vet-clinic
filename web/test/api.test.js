@@ -6,12 +6,15 @@ const path = require('node:path');
 
 const accountsPath = path.join(__dirname, `.staff-accounts-${crypto.randomUUID()}.json`);
 const adminInvitationCode = crypto.randomBytes(24).toString('base64url');
+const veterinarianInvitationCode = crypto.randomBytes(24).toString('base64url');
 const veterinarianPassword = crypto.randomBytes(24).toString('base64url');
 const administratorPassword = crypto.randomBytes(24).toString('base64url');
 process.env.AUTH_STORE_PATH = accountsPath;
 process.env.ADMIN_REGISTRATION_CODE = adminInvitationCode;
+process.env.VETERINARIAN_REGISTRATION_CODE = veterinarianInvitationCode;
 
 const app = require('../server');
+const { appointments } = require('../data/clinic');
 
 let baseUrl;
 let server;
@@ -47,9 +50,9 @@ const cookieFrom = (response) => {
   return cookie.split(';', 1)[0];
 };
 
-const postAppointment = (payload) => fetch(`${baseUrl}/api/appointments`, {
+const postAppointment = (payload, cookie = administratorCookie) => fetch(`${baseUrl}/api/appointments`, {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json', cookie: administratorCookie },
+  headers: { 'Content-Type': 'application/json', ...(cookie ? { cookie } : {}) },
   body: JSON.stringify(payload)
 });
 
@@ -92,7 +95,23 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
   assert.equal(unauthenticated.status, 401);
 
   const options = await get('/api/auth/options', '');
-  assert.deepEqual(await options.json(), { adminRegistrationEnabled: true });
+  assert.deepEqual(await options.json(), {
+    adminRegistrationEnabled: true,
+    veterinarianRegistrationEnabled: true
+  });
+
+  const invalidVeterinarianRegistration = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Dr. Taylor Morgan',
+      email: 'taylor@example.test',
+      password: veterinarianPassword,
+      role: 'veterinarian',
+      specialty: 'Dermatology'
+    })
+  });
+  assert.equal(invalidVeterinarianRegistration.status, 403);
 
   const veterinarianRegistration = await fetch(`${baseUrl}/api/auth/register`, {
     method: 'POST',
@@ -102,7 +121,8 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
       email: 'taylor@example.test',
       password: veterinarianPassword,
       role: 'veterinarian',
-      specialty: 'Dermatology'
+      specialty: 'Dermatology',
+      invitationCode: veterinarianInvitationCode
     })
   });
   assert.equal(veterinarianRegistration.status, 201);
@@ -122,7 +142,8 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
       email: 'short@example.test',
       password: 'short',
       role: 'veterinarian',
-      specialty: 'General practice'
+      specialty: 'General practice',
+      invitationCode: veterinarianInvitationCode
     })
   });
   assert.equal(shortPassword.status, 400);
@@ -135,7 +156,8 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
       email: 'TAYLOR@example.test',
       password: veterinarianPassword,
       role: 'veterinarian',
-      specialty: 'Surgery'
+      specialty: 'Surgery',
+      invitationCode: veterinarianInvitationCode
     })
   });
   assert.equal(duplicateEmail.status, 409);
@@ -193,6 +215,23 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
     body: JSON.stringify({ name: 'Moss', species: 'Cat', breed: 'Tabby', owner: 'Jamie Doe' })
   });
   assert.equal(veterinarianCannotRegisterPatient.status, 403);
+  assert.equal((await get('/api/appointments', veterinarianCookie)).status, 403);
+  assert.equal((await get('/api/invoices', veterinarianCookie)).status, 403);
+  const veterinarianDashboard = await (await get('/api/dashboard', veterinarianCookie)).json();
+  assert.deepEqual(veterinarianDashboard.stats.map((stat) => stat.label), [
+    'Registered patients',
+    'Veterinarians'
+  ]);
+  assert.deepEqual(veterinarianDashboard.upcoming, []);
+  assert.equal(JSON.stringify(veterinarianDashboard).includes('outstanding'), false);
+  assert.equal((await postAppointment({
+    patientId: 1,
+    veterinarianId: 1,
+    date: dateFromToday(45),
+    time: '09:35',
+    reason: 'Role check'
+  }, veterinarianCookie)).status, 403);
+  assert.equal((await patchRecord('/api/appointments/61', { status: 'Completed' }, veterinarianCookie)).status, 403);
   assert.equal((await patchRecord('/api/invoices/1043', { status: 'Paid' }, veterinarianCookie)).status, 403);
   assert.equal((await patchRecord('/api/appointments/67', { status: 'Cancelled' }, veterinarianCookie)).status, 403);
 
@@ -220,6 +259,13 @@ test('returns dashboard and clinic summary data', async () => {
   assert.ok(Array.isArray(dashboard.upcoming));
   assert.ok(dashboard.clinic);
   assert.equal('alerts' in dashboard, false);
+  assert.ok(dashboard.upcoming.every((appointment) => {
+    const [year, month, day] = appointment.date.split('-').map(Number);
+    const weekday = new Date(year, month - 1, day).getDay();
+    const [hours, minutes] = appointment.time.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    return weekday !== 0 && startMinutes >= 480 && startMinutes + 30 <= 1080;
+  }));
 
   const overviewResponse = await get('/api/overview');
   assert.equal(overviewResponse.status, 200);
@@ -263,7 +309,7 @@ test('registers patients and validates required details', async () => {
   const patient = await response.json();
   assert.equal(patient.name, 'Maple');
   assert.equal(patient.status, 'Active');
-  assert.equal(patient.lastVisit, dateFromToday(0));
+  assert.equal(patient.lastVisit, null);
 
   const invalid = await fetch(`${baseUrl}/api/patients`, {
     method: 'POST',
@@ -279,7 +325,7 @@ test('books a valid appointment and rejects a duplicate time slot', async () => 
     patientId: 1,
     veterinarianId: 5,
     date: dateFromToday(45),
-    time: '09:37',
+    time: '09:35',
     reason: 'Automated API test booking'
   };
 
@@ -294,6 +340,18 @@ test('books a valid appointment and rejects a duplicate time slot', async () => 
   const duplicateResponse = await postAppointment(payload);
   assert.equal(duplicateResponse.status, 409);
   assert.match((await duplicateResponse.json()).errors[0], /already booked/);
+
+  const patientDoubleBooking = await postAppointment({ ...payload, veterinarianId: 4 });
+  assert.equal(patientDoubleBooking.status, 409);
+  assert.match((await patientDoubleBooking.json()).errors[0], /already has a visit/);
+
+  const overlappingVisit = await postAppointment({
+    ...payload,
+    patientId: 2,
+    time: '10:00'
+  });
+  assert.equal(overlappingVisit.status, 409);
+  assert.match((await overlappingVisit.json()).errors[0], /already booked within 30 minutes/);
 });
 
 test('rejects invalid booking fields and dates in the past', async () => {
@@ -311,7 +369,7 @@ test('rejects invalid booking fields and dates in the past', async () => {
     patientId: 1,
     veterinarianId: 4,
     date: '2020-01-01',
-    time: '09:37',
+    time: '09:35',
     reason: 'Past appointment test'
   });
   assert.equal(pastResponse.status, 400);
@@ -321,23 +379,114 @@ test('rejects invalid booking fields and dates in the past', async () => {
     patientId: 1,
     veterinarianId: 4,
     date: dateFromToday(46),
-    time: '09:37',
+    time: '09:35',
     reason: 'x'.repeat(121)
   });
   assert.equal(longReasonResponse.status, 400);
   assert.match((await longReasonResponse.json()).errors[0], /120 characters or fewer/);
+
+  const today = new Date();
+  if (today.getDay() !== 0 && (today.getHours() > 8 ||
+      (today.getHours() === 8 && today.getMinutes() > 0))) {
+    const pastToday = await postAppointment({
+      patientId: 1,
+      veterinarianId: 4,
+      date: dateFromToday(0),
+      time: '08:00',
+      reason: 'Same-day past appointment test'
+    });
+    assert.equal(pastToday.status, 400);
+    assert.match((await pastToday.json()).errors[0], /later than now/);
+  }
+});
+
+test('rejects non-five-minute, off-hours, and Sunday bookings', async () => {
+  const basePayload = {
+    patientId: 1,
+    veterinarianId: 4,
+    date: dateFromToday(45),
+    time: '09:35',
+    reason: 'Booking rules test'
+  };
+  const invalidIncrement = await postAppointment({ ...basePayload, time: '09:37' });
+  assert.equal(invalidIncrement.status, 400);
+  assert.match((await invalidIncrement.json()).errors[0], /valid time/);
+
+  const beforeOpening = await postAppointment({ ...basePayload, time: '07:55' });
+  assert.equal(beforeOpening.status, 400);
+  assert.match((await beforeOpening.json()).errors[0], /08:00 and 17:30/);
+
+  const atClosing = await postAppointment({ ...basePayload, time: '18:00' });
+  assert.equal(atClosing.status, 400);
+  assert.match((await atClosing.json()).errors[0], /08:00 and 17:30/);
+
+  const nextSunday = new Date();
+  nextSunday.setDate(nextSunday.getDate() + ((7 - nextSunday.getDay()) % 7 || 7));
+  const sunday = [
+    nextSunday.getFullYear(),
+    String(nextSunday.getMonth() + 1).padStart(2, '0'),
+    String(nextSunday.getDate()).padStart(2, '0')
+  ].join('-');
+  const closedDay = await postAppointment({ ...basePayload, date: sunday });
+  assert.equal(closedDay.status, 400);
+  assert.match((await closedDay.json()).errors[0], /Monday to Saturday/);
 });
 
 test('updates scheduled visits and rejects invalid appointment transitions', async () => {
   const futureVisit = await patchRecord('/api/appointments/67', { status: 'Completed' });
   assert.equal(futureVisit.status, 409);
 
-  const completed = await patchRecord('/api/appointments/61', { status: 'Completed' });
-  assert.equal(completed.status, 200);
-  assert.equal((await completed.json()).status, 'Completed');
+  const shortlyAhead = new Date(Date.now() + 60_000);
+  if (dateFromToday(0) === [
+    shortlyAhead.getFullYear(),
+    String(shortlyAhead.getMonth() + 1).padStart(2, '0'),
+    String(shortlyAhead.getDate()).padStart(2, '0')
+  ].join('-')) {
+    const sameDayFutureVisit = {
+      id: 9000,
+      date: dateFromToday(0),
+      time: `${String(shortlyAhead.getHours()).padStart(2, '0')}:${String(shortlyAhead.getMinutes()).padStart(2, '0')}`,
+      patientId: 1,
+      patient: 'Daisy',
+      owner: 'Avery Bennett',
+      veterinarianId: 1,
+      veterinarian: 'Dr. Maya Chen',
+      reason: 'Premature completion check',
+      status: 'Scheduled'
+    };
+    appointments.push(sameDayFutureVisit);
+    try {
+      const prematureCompletion = await patchRecord('/api/appointments/9000', { status: 'Completed' });
+      assert.equal(prematureCompletion.status, 409);
+      assert.match((await prematureCompletion.json()).errors[0], /before its scheduled time/);
+    } finally {
+      appointments.splice(appointments.indexOf(sameDayFutureVisit), 1);
+    }
+  }
 
-  const duplicate = await patchRecord('/api/appointments/61', { status: 'Cancelled' });
-  assert.equal(duplicate.status, 409);
+  const elapsedVisit = {
+    id: 9001,
+    date: dateFromToday(-1),
+    time: '12:00',
+    patientId: 1,
+    patient: 'Daisy',
+    owner: 'Avery Bennett',
+    veterinarianId: 1,
+    veterinarian: 'Dr. Maya Chen',
+    reason: 'Completion permission test',
+    status: 'Scheduled'
+  };
+  appointments.push(elapsedVisit);
+  try {
+    const completed = await patchRecord('/api/appointments/9001', { status: 'Completed' });
+    assert.equal(completed.status, 200);
+    assert.equal((await completed.json()).status, 'Completed');
+
+    const duplicate = await patchRecord('/api/appointments/9001', { status: 'Cancelled' });
+    assert.equal(duplicate.status, 409);
+  } finally {
+    appointments.splice(appointments.indexOf(elapsedVisit), 1);
+  }
 
   const cancelled = await patchRecord('/api/appointments/62', { status: 'Cancelled' });
   assert.equal(cancelled.status, 200);

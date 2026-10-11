@@ -106,17 +106,33 @@ The visual direction was informed by the task-focused, clinician-centered presen
 2026-10-06. These were used only as high-level references for clarity and workflow readability;
 their branding, assets, and product UI were not copied.
 
+## 2026-10-11: Limit appointments and billing to administrators
+
+Only administrators can read, create, or update appointments and read or update invoices. The
+current staff accounts do not have a trusted link to veterinarian roster records, so allowing a
+veterinarian to act on appointments cannot be safely scoped to their own schedule. Veterinarian
+dashboards therefore omit schedule and financial summaries, and the browser does not request
+those records for veterinarian sessions. The API enforces the same boundary independently of
+the interface.
+
+Staff self-registration requires role-appropriate invitation codes, preventing anonymous visitors
+from creating veterinarian accounts. Booking enforces the clinic's published Monday-Saturday
+hours, five-minute start-time increments, and a 30-minute appointment duration. It prevents
+overlapping visits for either a veterinarian or patient and rejects same-day appointments in the
+past. Appointment completion is rejected before its scheduled date and time. A newly registered
+patient has no last-visit date until an actual visit is recorded.
+
 ## 2026-10-11: Protect staff workflows with individual sign-in
 
-Veterinarians register individual accounts; administrator registration requires an invitation code
-provided to the server through `ADMIN_REGISTRATION_CODE`, so visitors cannot grant themselves
-administrator privileges. Passwords are verified with Node's scrypt and only salts and derived
-hashes are stored in an ignored, permission-restricted local account file. Session tokens are
-random, HttpOnly, SameSite cookies and expire after 12 hours. Protected API routes enforce the
-administrator/veterinarian permissions; hiding controls in the UI is not the security boundary.
-Sessions are in-memory and cleared when the demo server restarts. This avoids claiming production
-readiness without durable session storage, HTTPS deployment configuration, account recovery,
-and operational security review.
+Veterinarian and administrator account registration each require a role-appropriate invitation
+code provided to the server through `VETERINARIAN_REGISTRATION_CODE` and
+`ADMIN_REGISTRATION_CODE`; visitors cannot grant themselves staff access by choosing a role.
+Passwords are verified with Node's scrypt and only salts and derived hashes are stored in an
+ignored, permission-restricted local account file. Session tokens are random, HttpOnly,
+SameSite cookies and expire after 12 hours. Protected API routes enforce role permissions;
+hiding controls in the UI is not the security boundary. Sessions are in-memory and cleared when
+the demo server restarts. This avoids claiming production readiness without durable session
+storage, HTTPS deployment configuration, account recovery, and operational security review.
 
 ## 2026-10-06: Booking dates and times are validated as real calendar values
 

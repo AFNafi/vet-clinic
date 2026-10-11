@@ -29,19 +29,20 @@
         <form id="register-form" class="auth-form" hidden>
           <label>Account type
             <select name="role" id="registration-role">
-              <option value="veterinarian">Veterinarian</option>
+              <option value="veterinarian" id="veterinarian-registration-option">Veterinarian · staff invite required</option>
               <option value="admin" id="admin-registration-option" disabled>Administrator · invite setup required</option>
             </select>
           </label>
           <label>Full name<input name="name" type="text" maxlength="80" autocomplete="name" required></label>
           <label id="specialty-field">Veterinary specialty<input name="specialty" type="text" maxlength="60" placeholder="General practice" required></label>
-          <label id="invitation-field" hidden>Administrator invitation code<input name="invitationCode" type="password" autocomplete="off"></label>
+          <label id="invitation-field" hidden><span id="invitation-label">Staff invitation code</span><input name="invitationCode" type="password" autocomplete="off"></label>
           <label>Email address<input name="email" type="email" maxlength="254" autocomplete="email" required></label>
           <label>Password <span class="password-hint">12 characters minimum</span><input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
-          <button class="primary-button auth-submit" type="submit">Create account</button>
+          <p class="auth-feedback" id="registration-notice" role="status" hidden></p>
+          <button class="primary-button auth-submit" id="register-submit" type="submit">Create account</button>
           <p class="auth-switch">Already registered? <button type="button" data-auth-view="login">Sign in</button></p>
         </form>
-        <p class="auth-security-note">Accounts use individual sign-ins. Administrator registration needs an invitation from the clinic owner.</p>
+        <p class="auth-security-note">Individual staff accounts require a private invitation from the clinic owner.</p>
       </section>
     </main>
 
@@ -62,11 +63,11 @@
             <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8.2" r="1.9"/><circle cx="12" cy="6.4" r="1.9"/><circle cx="17" cy="8.2" r="1.9"/><path d="M12 11.2c-2.4 0-4.7 1.9-4.7 4 0 1.6 1.3 2.8 3 2.8.8 0 1.2-.3 1.7-.3s.9.3 1.7.3c1.7 0 3-1.2 3-2.8 0-2.1-2.3-4-4.7-4Z"/></svg>
             Patients
           </button>
-          <button class="nav-item" data-view="appointments">
+          <button class="nav-item admin-only" data-view="appointments" hidden>
             <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.8v3.4M16 2.8v3.4"/></svg>
             Appointments
           </button>
-          <button class="nav-item" data-view="billing">
+          <button class="nav-item admin-only" data-view="billing" hidden>
             <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.8h19"/></svg>
             Billing
           </button>
@@ -91,7 +92,7 @@
             <h1 id="page-title">Clinic overview.</h1>
           </div>
           <div class="topbar-actions">
-            <button class="primary-button" id="new-appointment-button" type="button">New appointment</button>
+            <button class="primary-button admin-only" id="new-appointment-button" type="button" hidden>New appointment</button>
           </div>
         </header>
 
@@ -100,7 +101,7 @@
         <section class="view active" id="dashboard-view" aria-labelledby="page-title">
           <div class="summary-grid" id="summary-grid" aria-live="polite"></div>
           <div class="dashboard-grid">
-            <section class="panel appointments-panel">
+            <section class="panel appointments-panel admin-only" hidden>
               <div class="panel-heading">
                 <div><p class="eyebrow">Daily overview</p><h2>Appointments</h2></div>
               </div>
@@ -141,7 +142,7 @@
           </section>
         </section>
 
-        <section class="view" id="appointments-view" aria-labelledby="appointments-heading">
+        <section class="view admin-only" id="appointments-view" aria-labelledby="appointments-heading" hidden>
           <div class="section-heading">
             <div>
               <p class="eyebrow">Clinic schedule</p>
@@ -158,7 +159,7 @@
           </section>
         </section>
 
-        <section class="view" id="billing-view" aria-labelledby="billing-heading">
+        <section class="view admin-only" id="billing-view" aria-labelledby="billing-heading" hidden>
           <div class="section-heading">
             <div>
               <p class="eyebrow">Accounts</p>
