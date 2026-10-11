@@ -1,8 +1,8 @@
 const express = require('express');
 const {
-  clinic, patients, veterinarians, appointments, invoices, toIsoDate, dateFromToday
+  clinic, patients, appointments, invoices, toIsoDate, dateFromToday, persistClinicData
 } = require('../data/clinic');
-const { requireAuth, requireRole } = require('./auth');
+const { requireAuth, requireRole, getVeterinarianRoster } = require('./auth');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -62,9 +62,13 @@ router.get('/overview', (request, response) => {
 router.get('/dashboard', (request, response) => {
   const today = toIsoDate(dateFromToday(0));
   const isAdmin = request.user.role === 'admin';
+  const activeVeterinarians = getVeterinarianRoster();
+  const activeVeterinarianIds = new Set(activeVeterinarians.map((item) => item.id));
   const upcoming = isAdmin
     ? appointments
-      .filter((appointment) => appointment.status === 'Scheduled' && appointment.date >= today)
+      .filter((appointment) => appointment.status === 'Scheduled' &&
+        appointment.date >= today &&
+        activeVeterinarianIds.has(appointment.veterinarianId))
       .sort(bySchedule)
       .slice(0, 5)
       .map(({ date, time, patient, reason, veterinarian }) => ({
@@ -78,6 +82,7 @@ router.get('/dashboard', (request, response) => {
   const todayCount = isAdmin
     ? appointments.filter(
       (appointment) => appointment.date === today && appointment.status === 'Scheduled'
+        && activeVeterinarianIds.has(appointment.veterinarianId)
     ).length
     : 0;
 
@@ -103,7 +108,7 @@ router.get('/dashboard', (request, response) => {
       }] : []),
       {
         label: 'Veterinarians',
-        value: veterinarians.length,
+        value: activeVeterinarians.length,
         detail: 'All on the rota this week',
         tone: 'purple'
       }
@@ -144,20 +149,28 @@ router.post('/patients', requireRole('admin'), (request, response) => {
     lastVisit: null
   };
   patients.push(patient);
+  try {
+    persistClinicData();
+  } catch (error) {
+    patients.splice(patients.indexOf(patient), 1);
+    throw error;
+  }
   return response.status(201).json(patient);
 });
 
 router.get('/veterinarians', (request, response) => {
-  response.json(veterinarians);
+  response.json(getVeterinarianRoster());
 });
 
 router.get('/appointments', requireRole('admin'), (request, response) => {
+  const activeVeterinarianIds = new Set(getVeterinarianRoster().map((item) => item.id));
   const status = String(request.query.status || 'all').toLowerCase();
   const matches = status === 'all'
     ? appointments
     : appointments.filter((appointment) => appointment.status.toLowerCase() === status);
 
-  response.json([...matches].sort(bySchedule));
+  response.json(matches.filter((appointment) =>
+    activeVeterinarianIds.has(appointment.veterinarianId)).sort(bySchedule));
 });
 
 router.get('/invoices', requireRole('admin'), (request, response) => {
@@ -172,7 +185,8 @@ router.get('/invoices', requireRole('admin'), (request, response) => {
 router.post('/appointments', requireRole('admin'), (request, response) => {
   const body = request.body || {};
   const patient = patients.find((item) => item.id === Number(body.patientId));
-  const veterinarian = veterinarians.find((item) => item.id === Number(body.veterinarianId));
+  const veterinarian = getVeterinarianRoster()
+    .find((item) => item.id === Number(body.veterinarianId));
   const date = String(body.date || '').trim();
   const time = String(body.time || '').trim();
   const reason = String(body.reason || '').trim();
@@ -236,6 +250,12 @@ router.post('/appointments', requireRole('admin'), (request, response) => {
   };
 
   appointments.push(appointment);
+  try {
+    persistClinicData();
+  } catch (error) {
+    appointments.splice(appointments.indexOf(appointment), 1);
+    throw error;
+  }
   return response.status(201).json(appointment);
 });
 
@@ -254,7 +274,14 @@ router.patch('/appointments/:id', requireRole('admin'), (request, response) => {
     return response.status(409).json({ errors: ['An appointment cannot be completed before its scheduled time.'] });
   }
 
+  const previousStatus = appointment.status;
   appointment.status = status === 'completed' ? 'Completed' : 'Cancelled';
+  try {
+    persistClinicData();
+  } catch (error) {
+    appointment.status = previousStatus;
+    throw error;
+  }
   return response.json(appointment);
 });
 
@@ -268,7 +295,14 @@ router.patch('/invoices/:id', requireRole('admin'), (request, response) => {
     return response.status(409).json({ errors: ['This invoice is already paid.'] });
   }
 
+  const previousStatus = invoice.status;
   invoice.status = 'Paid';
+  try {
+    persistClinicData();
+  } catch (error) {
+    invoice.status = previousStatus;
+    throw error;
+  }
   return response.json(invoice);
 });
 

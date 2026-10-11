@@ -3,6 +3,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { promisify } = require('node:util');
+const { veterinarians, persistClinicData } = require('../data/clinic');
 
 const router = express.Router();
 const scrypt = promisify(crypto.scrypt);
@@ -24,6 +25,83 @@ let accounts = fs.existsSync(accountsPath)
   : [];
 const sessions = new Map();
 const authAttempts = new Map();
+
+function canonicalName(name) {
+  return String(name).replace(/^Dr\.?\s+/i, '').trim().toLowerCase();
+}
+
+function nextVeterinarianId() {
+  return veterinarians.reduce((highest, item) => Math.max(highest, item.id), 0) + 1;
+}
+
+function ensureVeterinarianProfile(account) {
+  if (account.role !== 'veterinarian') return { profile: null, created: false, changed: false };
+
+  const email = account.email.toLowerCase();
+  let profile = veterinarians.find((item) =>
+    item.accountId === account.id || item.email?.toLowerCase() === email);
+  if (!profile) {
+    profile = veterinarians.find((item) =>
+      !item.email && canonicalName(item.name) === canonicalName(account.name));
+  }
+
+  let changed = false;
+  let created = false;
+  if (!profile) {
+    const id = Number.isInteger(account.veterinarianId) &&
+      !veterinarians.some((item) => item.id === account.veterinarianId)
+      ? account.veterinarianId
+      : nextVeterinarianId();
+    profile = {
+      id,
+      name: /^Dr\.?\s/i.test(account.name) ? account.name : `Dr. ${account.name}`,
+      email,
+      specialty: account.specialty ||
+        account.title.split('·')[1]?.trim() ||
+        'General Practice',
+      accountId: account.id
+    };
+    veterinarians.push(profile);
+    created = true;
+    changed = true;
+  } else {
+    if (!profile.email) {
+      profile.email = email;
+      changed = true;
+    }
+    if (profile.accountId !== account.id) {
+      profile.accountId = account.id;
+      changed = true;
+    }
+  }
+
+  if (account.veterinarianId !== profile.id) {
+    account.veterinarianId = profile.id;
+    changed = true;
+  }
+  return { profile, created, changed };
+}
+
+function getVeterinarianRoster() {
+  const veterinarianAccounts = accounts.filter((account) => account.role === 'veterinarian');
+  return veterinarians
+    .filter((profile) => veterinarianAccounts.some((account) =>
+      profile.accountId === account.id ||
+      profile.email?.toLowerCase() === account.email.toLowerCase() ||
+      (account.veterinarianId === profile.id &&
+        canonicalName(profile.name) === canonicalName(account.name))))
+    .map(({ id, name, email, specialty }) => ({ id, name, email, specialty }));
+}
+
+let rosterChanged = false;
+for (const account of accounts) {
+  const { changed } = ensureVeterinarianProfile(account);
+  rosterChanged ||= changed;
+}
+if (rosterChanged) {
+  persistClinicData();
+  persistAccounts();
+}
 
 function safeEqual(first, second) {
   const firstBytes = Buffer.from(first);
@@ -165,14 +243,26 @@ router.post('/register', rateLimit, async (request, response) => {
     title: role === 'admin' ? 'Clinic administrator' : `Veterinarian · ${specialty}`,
     role,
     initials: initialsFor(name),
+    ...(role === 'veterinarian' ? { specialty } : {}),
     salt: salt.toString('base64url'),
     passwordHash: passwordHash.toString('base64url')
   };
   accounts.push(account);
+  const veterinarianProfile = ensureVeterinarianProfile(account);
   try {
+    if (veterinarianProfile.profile) persistClinicData();
     persistAccounts();
   } catch (error) {
     accounts = accounts.filter((item) => item.id !== account.id);
+    if (veterinarianProfile.created) {
+      veterinarians.splice(veterinarians.indexOf(veterinarianProfile.profile), 1);
+      try {
+        persistClinicData();
+        persistAccounts();
+      } catch (rollbackError) {
+        error.rollbackError = rollbackError;
+      }
+    }
     throw error;
   }
   setSession(account, response);
@@ -220,4 +310,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { router, requireAuth, requireRole };
+module.exports = { router, requireAuth, requireRole, getVeterinarianRoster };

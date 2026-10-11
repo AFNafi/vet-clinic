@@ -3,7 +3,9 @@
 This is a responsive, fictional veterinary clinic UI served by Express. Its dashboard, patient
 list, appointment list, and billing list are rendered in the browser by `public/js/main.js`
 from JSON served by `server.js`. Clinic records live in `data/clinic.js`; staff accounts use
-password hashes in an ignored local data file. The web demo does not connect to Oracle.
+password hashes in an ignored local data file. Each veterinarian account is linked to one
+veterinarian profile; the schedule only offers linked accounts. The web demo does not connect
+to Oracle.
 
 ## Project layout
 
@@ -12,7 +14,7 @@ server.js          Express app: static files, /api router, JSON 404 for unknown 
 routes/api.js      Authenticated endpoints for dashboard, patients, veterinarians,
                    appointments, invoices, and the clinic overview
 routes/auth.js     Staff registration, sign-in, sessions, and server-side role checks
-data/clinic.js     In-memory fictional records (no real personal data)
+data/clinic.js     Fictional clinic records and local JSON persistence
 public/index.html  Single-page layout: dashboard, patients, appointments, billing views
 public/js/main.js  Front-end module: fetches the API and renders each view
 public/styles.css  Design tokens and component styles
@@ -57,6 +59,10 @@ codes in project files.
 - The patients view has a live search box; appointments and billing have status filters.
 - Register an individual staff account with the appropriate invitation code, or sign in with email
   and password.
+- A veterinarian account is automatically added to the staff roster and appointment booking
+  list. Existing roster entries are shown only when they are linked to a veterinarian account.
+- The clinic store saves patient, roster, appointment, and invoice changes locally. It is ignored
+  by Git alongside the private staff account hashes.
 - Administrators alone can view/create/change appointments, view invoices, register patients, and
   mark invoices paid. A visit cannot be completed before its scheduled date and time.
 - Veterinarians can view clinic and patient information. They cannot access the clinic-wide
@@ -77,7 +83,8 @@ or Oracle database.
 The API supports `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`,
 `POST /api/patients`,
 `PATCH /api/appointments/:id` (`Completed` or `Cancelled`), and
-`PATCH /api/invoices/:id` (`Paid`). All changes update the in-memory demo records.
+`PATCH /api/invoices/:id` (`Paid`). Clinic changes are saved to the local ignored
+`data/clinic-store.json` file.
 
 ## Security note
 

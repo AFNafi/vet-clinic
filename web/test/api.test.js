@@ -5,16 +5,42 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const accountsPath = path.join(__dirname, `.staff-accounts-${crypto.randomUUID()}.json`);
+const clinicStorePath = path.join(__dirname, `.clinic-store-${crypto.randomUUID()}.json`);
 const adminInvitationCode = crypto.randomBytes(24).toString('base64url');
 const veterinarianInvitationCode = crypto.randomBytes(24).toString('base64url');
 const veterinarianPassword = crypto.randomBytes(24).toString('base64url');
 const administratorPassword = crypto.randomBytes(24).toString('base64url');
 process.env.AUTH_STORE_PATH = accountsPath;
+process.env.CLINIC_STORE_PATH = clinicStorePath;
 process.env.ADMIN_REGISTRATION_CODE = adminInvitationCode;
 process.env.VETERINARIAN_REGISTRATION_CODE = veterinarianInvitationCode;
 
+const { veterinarians, appointments } = require('../data/clinic');
+const seededAccounts = veterinarians.map((veterinarian) => {
+  const name = veterinarian.name.replace(/^Dr\.\s*/, '');
+  const salt = crypto.randomBytes(16);
+  const passwordHash = crypto.scryptSync(
+    'unused-seeded-test-password',
+    salt,
+    64,
+    { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }
+  );
+  return {
+    id: crypto.randomUUID(),
+    email: veterinarian.email,
+    name,
+    title: `Veterinarian · ${veterinarian.specialty}`,
+    role: 'veterinarian',
+    initials: name.split(/\s+/).slice(0, 2).map((part) => part[0]).join(''),
+    specialty: veterinarian.specialty,
+    veterinarianId: veterinarian.id,
+    salt: salt.toString('base64url'),
+    passwordHash: passwordHash.toString('base64url')
+  };
+});
+fs.writeFileSync(accountsPath, JSON.stringify(seededAccounts, null, 2), { mode: 0o600 });
+
 const app = require('../server');
-const { appointments } = require('../data/clinic');
 
 let baseUrl;
 let server;
@@ -39,6 +65,7 @@ after(async () => {
     });
   }
   fs.rmSync(accountsPath, { force: true });
+  fs.rmSync(clinicStorePath, { force: true });
 });
 
 const get = (route, cookie = administratorCookie) =>
@@ -66,6 +93,16 @@ const dateFromToday = (daysAhead) => {
   const date = new Date();
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + daysAhead);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-');
+};
+
+const clinicDateFromToday = (daysAhead) => {
+  const date = new Date(`${dateFromToday(daysAhead)}T12:00:00`);
+  if (date.getDay() === 0) date.setDate(date.getDate() + 1);
   return [
     date.getFullYear(),
     String(date.getMonth() + 1).padStart(2, '0'),
@@ -133,6 +170,11 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
   assert.equal(veterinarian.role, 'veterinarian');
   assert.equal(veterinarian.title, 'Veterinarian · Dermatology');
   assert.equal('passwordHash' in veterinarian, false);
+  const rosterAfterRegistration = await (await get('/api/veterinarians', veterinarianCookie)).json();
+  const registeredVeterinarian = rosterAfterRegistration.find((item) =>
+    item.email === veterinarian.email);
+  assert.ok(registeredVeterinarian);
+  assert.equal(registeredVeterinarian.name, 'Dr. Taylor Morgan');
 
   const shortPassword = await fetch(`${baseUrl}/api/auth/register`, {
     method: 'POST',
@@ -279,7 +321,12 @@ test('returns searchable records and status-filtered lists', async () => {
 
   const vetsResponse = await get('/api/veterinarians');
   assert.equal(vetsResponse.status, 200);
-  assert.equal((await vetsResponse.json()).length, 10);
+  const roster = await vetsResponse.json();
+  assert.equal(roster.length, seededAccounts.length + 1);
+  assert.deepEqual(
+    roster.filter((item) => item.email !== 'taylor@example.test').map((item) => item.email).sort(),
+    seededAccounts.map((item) => item.email).sort()
+  );
 
   const completedResponse = await get('/api/appointments?status=completed');
   assert.equal(completedResponse.status, 200);
@@ -354,6 +401,36 @@ test('books a valid appointment and rejects a duplicate time slot', async () => 
   assert.match((await overlappingVisit.json()).errors[0], /already booked within 30 minutes/);
 });
 
+test('admin can schedule every veterinarian with a registered account', async () => {
+  const roster = await (await get('/api/veterinarians')).json();
+  assert.equal(roster.length, seededAccounts.length + 1);
+  const date = clinicDateFromToday(60);
+
+  for (const [index, veterinarian] of roster.entries()) {
+    const minutes = 8 * 60 + index * 30;
+    const time = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+    const response = await postAppointment({
+      patientId: (index % 8) + 1,
+      veterinarianId: veterinarian.id,
+      date,
+      time,
+      reason: `Account-linked booking for ${veterinarian.name}`
+    });
+    assert.equal(response.status, 201, `Could not schedule ${veterinarian.name}.`);
+    const appointment = await response.json();
+    assert.equal(appointment.veterinarianId, veterinarian.id);
+    assert.equal(appointment.veterinarian, veterinarian.name);
+  }
+
+  const persisted = JSON.parse(fs.readFileSync(clinicStorePath, 'utf8'));
+  assert.equal(
+    persisted.appointments.filter((item) =>
+      item.date === date &&
+      item.reason.startsWith('Account-linked booking for ')).length,
+    roster.length
+  );
+});
+
 test('rejects invalid booking fields and dates in the past', async () => {
   const invalidResponse = await postAppointment({
     patientId: 999,
@@ -378,7 +455,7 @@ test('rejects invalid booking fields and dates in the past', async () => {
   const longReasonResponse = await postAppointment({
     patientId: 1,
     veterinarianId: 4,
-    date: dateFromToday(46),
+    date: clinicDateFromToday(46),
     time: '09:35',
     reason: 'x'.repeat(121)
   });
@@ -404,7 +481,7 @@ test('rejects non-five-minute, off-hours, and Sunday bookings', async () => {
   const basePayload = {
     patientId: 1,
     veterinarianId: 4,
-    date: dateFromToday(45),
+    date: clinicDateFromToday(45),
     time: '09:35',
     reason: 'Booking rules test'
   };

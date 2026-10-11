@@ -122,6 +122,16 @@ overlapping visits for either a veterinarian or patient and rejects same-day app
 past. Appointment completion is rejected before its scheduled date and time. A newly registered
 patient has no last-visit date until an actual visit is recorded.
 
+## 2026-10-11: Keep veterinarian profiles linked to staff accounts
+
+The appointment picker must never offer a veterinarian who cannot sign in. The veterinarian
+directory is therefore filtered to account-backed profiles. When a veterinarian registers, the
+server creates and saves their roster profile using the same email and a stable veterinarian ID;
+existing profiles are linked by email and older name-only profiles are matched by name. The
+dashboard count and visible schedule use the same linked roster. Patient, veterinarian,
+appointment, and invoice changes are persisted in the ignored local clinic store so a restart
+does not discard a booking. Dr. Maya Chen is retained as a veterinarian profile and account.
+
 ## 2026-10-11: Protect staff workflows with individual sign-in
 
 Veterinarian and administrator account registration each require a role-appropriate invitation

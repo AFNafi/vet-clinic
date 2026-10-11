@@ -3,4 +3,7 @@
 .env
 /web/data/staff-accounts.json
 /web/data/staff-accounts.json.*.tmp
+/web/data/clinic-store.json
+/web/data/clinic-store.json.*.tmp
 /web/test/.staff-accounts-*.json
+/web/test/.clinic-store-*.json

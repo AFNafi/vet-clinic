@@ -1,5 +1,5 @@
-// In-memory practice records for the Vetwise Clinic console.
-// Swap these for Oracle queries (node-oracledb) when the database is connected.
+// Fictional practice records for the Vetwise Clinic console.
+// The local JSON store persists changes until Oracle is connected.
 
 const startOfToday = () => {
   const today = new Date();
@@ -40,7 +40,8 @@ const veterinarians = [
   { id: 7, name: 'Dr. Sophia Martinez', email: 'sophia.martinez@vetwise.test', specialty: 'Feline Medicine' },
   { id: 8, name: 'Dr. Lucas Brown', email: 'lucas.brown@vetwise.test', specialty: 'Orthopedics' },
   { id: 9, name: 'Dr. Isabella Davis', email: 'isabella.davis@vetwise.test', specialty: 'Oncology' },
-  { id: 10, name: 'Dr. Mason Wilson', email: 'mason.wilson@vetwise.test', specialty: 'Exotic Animal Medicine' }
+  { id: 10, name: 'Dr. Mason Wilson', email: 'mason.wilson@vetwise.test', specialty: 'Exotic Animal Medicine' },
+  { id: 11, name: 'Dr. Maya Chen', email: 'maya.chen@vetwise.test', specialty: 'Internal Medicine' }
 ];
 
 const firstAppointmentDayOffset = dateFromToday(0).getDay() === 0 ? 1 : 0;
