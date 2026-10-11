@@ -3,12 +3,14 @@ const path = require('path');
 require('dotenv').config();
 
 const apiRouter = require('./routes/api');
+const authRouter = require('./routes/auth');
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/api/auth', authRouter.router);
 app.use('/api', apiRouter);
 
 // Unknown API routes answer as JSON instead of falling through to the HTML page.

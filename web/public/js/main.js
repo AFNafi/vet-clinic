@@ -3,8 +3,7 @@
 
 const state = {
   dashboard: null,
-  profiles: [],
-  currentProfile: null,
+  user: null,
   patients: [],
   veterinarians: [],
   appointments: [],
@@ -12,43 +11,30 @@ const state = {
   dashboardDate: null
 };
 
-const get = async (url) => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Could not load ${url}`);
-  return response.json();
-};
-
-const post = async (url, body) => {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+async function request(url, options = {}) {
+  const response = await fetch(url, options);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error('The request failed.');
+    if (response.status === 401 && !url.startsWith('/api/auth/')) {
+      state.user = null;
+      showAuthScreen('Your sign-in has expired. Please sign in again.');
+    }
+    const error = new Error(data.errors?.join(' ') || data.error || `Could not complete ${url}`);
     error.fieldErrors = data.errors || [data.error || 'The request failed.'];
     error.status = response.status;
     throw error;
   }
   return data;
-};
+}
 
-const patch = async (url, body) => {
-  const response = await fetch(url, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error('The request failed.');
-    error.fieldErrors = data.errors || [data.error || 'The request failed.'];
-    error.status = response.status;
-    throw error;
-  }
-  return data;
-};
+const jsonRequest = (method, body) => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body)
+});
+const get = (url) => request(url);
+const post = (url, body) => request(url, jsonRequest('POST', body));
+const patch = (url, body) => request(url, jsonRequest('PATCH', body));
 
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -139,7 +125,7 @@ function filterPatients(search) {
 }
 
 function renderAppointments(rows = state.appointments) {
-  const role = state.currentProfile?.role;
+  const role = state.user?.role;
   const today = new Date();
   const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const canManage = role === 'admin' || role === 'veterinarian';
@@ -164,7 +150,7 @@ function renderAppointments(rows = state.appointments) {
 }
 
 function renderInvoices(rows = state.invoices) {
-  const isAdmin = state.currentProfile?.role === 'admin';
+  const isAdmin = state.user?.role === 'admin';
   document.querySelector('.invoice-actions-heading').hidden = !isAdmin;
   document.querySelector('#invoices-table-body').innerHTML = rows.map((invoice) => `
     <tr>
@@ -179,12 +165,11 @@ function renderInvoices(rows = state.invoices) {
 }
 
 function renderProfile() {
-  const profile = state.currentProfile;
+  const profile = state.user;
   if (!profile) return;
   document.querySelector('#profile-avatar').textContent = profile.initials;
   document.querySelector('#profile-name').textContent = profile.name;
   document.querySelector('#profile-title').textContent = profile.title;
-  document.querySelector('#profile-select').value = profile.id;
   document.querySelectorAll('.admin-only').forEach((element) => {
     element.hidden = profile.role !== 'admin';
   });
@@ -225,8 +210,75 @@ function toast(message) {
 function showError(error) {
   console.error(error);
   const message = document.querySelector('#load-error');
-  message.textContent = 'Demo data could not be loaded. Check that the Express server is running, then refresh this page.';
+  message.textContent = 'Clinic data could not be loaded. Check that the server is running, then refresh this page.';
   message.hidden = false;
+}
+
+function showAuthScreen(message = '') {
+  document.querySelector('#app-shell').hidden = true;
+  document.querySelector('#auth-screen').hidden = false;
+  document.querySelector('#auth-feedback').textContent = message;
+  document.querySelector('#auth-feedback').hidden = !message;
+  setAuthView('login');
+}
+
+function setAuthView(view) {
+  const registration = view === 'register';
+  document.querySelector('#login-form').hidden = registration;
+  document.querySelector('#register-form').hidden = !registration;
+  document.querySelector('#auth-title').textContent = registration ? 'Join your team.' : 'Welcome back.';
+  document.querySelector('#auth-feedback').hidden = true;
+}
+
+function setRegistrationRole(role) {
+  const isAdmin = role === 'admin';
+  const specialty = document.querySelector('#specialty-field');
+  const specialtyInput = specialty.querySelector('input');
+  specialty.hidden = isAdmin;
+  specialtyInput.required = !isAdmin;
+  const invitation = document.querySelector('#invitation-field');
+  const invitationInput = invitation.querySelector('input');
+  invitation.hidden = !isAdmin;
+  invitationInput.required = isAdmin;
+}
+
+async function loadClinicData() {
+  const [dashboard, patients, veterinarians, appointments, invoices] = await Promise.all([
+    get('/api/dashboard'), get('/api/patients'), get('/api/veterinarians'),
+    get('/api/appointments'), get('/api/invoices')
+  ]);
+  state.dashboard = dashboard;
+  state.patients = patients;
+  state.veterinarians = veterinarians;
+  state.appointments = appointments;
+  state.invoices = invoices;
+  state.dashboardDate = localIsoDate();
+
+  document.querySelector('#app-shell').hidden = false;
+  document.querySelector('#auth-screen').hidden = true;
+  renderProfile();
+  renderDashboard();
+  renderPatients();
+  renderAppointments();
+  renderInvoices();
+}
+
+async function handleAuthSubmit(event, endpoint) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const payload = Object.fromEntries(new FormData(form).entries());
+  const feedback = document.querySelector('#auth-feedback');
+  feedback.hidden = true;
+  try {
+    const result = await post(endpoint, payload);
+    state.user = result.user;
+    await loadClinicData();
+  } catch (error) {
+    if (!error.status) console.error(error);
+    feedback.textContent = error.fieldErrors?.join(' ') ||
+      'Could not load the clinic workspace. Check the server and try again.';
+    feedback.hidden = false;
+  }
 }
 
 // --- Booking dialog -------------------------------------------------------
@@ -384,29 +436,21 @@ async function start() {
   }).format(new Date());
 
   try {
-    const [dashboard, profiles, patients, veterinarians, appointments, invoices] = await Promise.all([
-      get('/api/dashboard'), get('/api/profiles'), get('/api/patients'), get('/api/veterinarians'),
-      get('/api/appointments'), get('/api/invoices')
-    ]);
-    state.dashboard = dashboard;
-    state.profiles = profiles;
-    state.currentProfile = profiles.find((profile) => profile.id === 'vet-hannibal');
-    state.patients = patients;
-    state.veterinarians = veterinarians;
-    state.appointments = appointments;
-    state.invoices = invoices;
-
-    state.dashboardDate = localIsoDate();
-    renderDashboard();
-    document.querySelector('#profile-select').innerHTML = profiles.map((profile) =>
-      `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)} · ${escapeHtml(profile.title)}</option>`
-    ).join('');
-    renderProfile();
-    renderPatients();
-    renderAppointments();
-    renderInvoices();
+    const [options, session] = await Promise.all([get('/api/auth/options'), get('/api/auth/me')]);
+    const adminOption = document.querySelector('#admin-registration-option');
+    adminOption.disabled = !options.adminRegistrationEnabled;
+    if (!options.adminRegistrationEnabled) {
+      adminOption.textContent = 'Administrator · invite setup required';
+    }
+    if (session.user) {
+      state.user = session.user;
+      await loadClinicData();
+    } else {
+      showAuthScreen();
+    }
   } catch (error) {
-    showError(error);
+    console.error(error);
+    showAuthScreen('Unable to connect to the clinic server. Refresh the page and try again.');
   }
 }
 
@@ -418,10 +462,12 @@ document.addEventListener('click', async (event) => {
   const appointmentAction = event.target.closest('[data-appointment-action]');
   const invoiceAction = event.target.closest('[data-invoice-action]');
   const agendaDate = event.target.closest('[data-agenda-date]');
+  const authView = event.target.closest('[data-auth-view]');
   if (nav) {
     event.preventDefault();
     showView(nav.dataset.view);
   }
+  if (authView) setAuthView(authView.dataset.authView);
   if (agendaDate) {
     state.dashboardDate = agendaDate.dataset.agendaDate;
     renderDashboard();
@@ -453,11 +499,6 @@ dialog.addEventListener('click', (event) => {
   if (event.target === dialog) closeBookingDialog();
 });
 
-document.querySelector('#profile-select').addEventListener('change', (event) => {
-  state.currentProfile = state.profiles.find((profile) => profile.id === event.currentTarget.value);
-  renderProfile();
-});
-
 document.querySelector('#patient-search').addEventListener('input', (event) => {
   const search = event.currentTarget.value.trim().toLowerCase();
   renderPatients(filterPatients(search));
@@ -469,6 +510,24 @@ document.querySelector('#appointment-filter').addEventListener('change', (event)
 
 document.querySelector('#invoice-filter').addEventListener('change', (event) => {
   renderInvoices(filterRows(state.invoices, event.currentTarget.value));
+});
+
+document.querySelector('#login-form').addEventListener('submit', (event) =>
+  handleAuthSubmit(event, '/api/auth/login'));
+document.querySelector('#register-form').addEventListener('submit', (event) =>
+  handleAuthSubmit(event, '/api/auth/register'));
+document.querySelector('#registration-role').addEventListener('change', (event) =>
+  setRegistrationRole(event.currentTarget.value));
+document.querySelector('#logout-button').addEventListener('click', async () => {
+  try {
+    await post('/api/auth/logout', {});
+    state.user = null;
+    document.querySelector('#login-form').reset();
+    document.querySelector('#register-form').reset();
+    showAuthScreen('You have signed out.');
+  } catch (error) {
+    showError(error);
+  }
 });
 
 start();

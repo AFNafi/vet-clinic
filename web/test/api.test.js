@@ -1,9 +1,22 @@
 const assert = require('node:assert/strict');
 const { after, before, test } = require('node:test');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const accountsPath = path.join(__dirname, `.staff-accounts-${crypto.randomUUID()}.json`);
+const adminInvitationCode = crypto.randomBytes(24).toString('base64url');
+const veterinarianPassword = crypto.randomBytes(24).toString('base64url');
+const administratorPassword = crypto.randomBytes(24).toString('base64url');
+process.env.AUTH_STORE_PATH = accountsPath;
+process.env.ADMIN_REGISTRATION_CODE = adminInvitationCode;
+
 const app = require('../server');
 
 let baseUrl;
 let server;
+let administratorCookie = '';
+let veterinarianCookie = '';
 
 before(async () => {
   server = app.listen(0);
@@ -16,24 +29,33 @@ before(async () => {
 });
 
 after(async () => {
-  if (!server) return;
-  await new Promise((resolve, reject) => {
-    server.close((error) => error ? reject(error) : resolve());
-    server.closeAllConnections();
-  });
+  if (server) {
+    await new Promise((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+      server.closeAllConnections();
+    });
+  }
+  fs.rmSync(accountsPath, { force: true });
 });
 
-const get = (path) => fetch(`${baseUrl}${path}`);
+const get = (route, cookie = administratorCookie) =>
+  fetch(`${baseUrl}${route}`, { headers: cookie ? { cookie } : {} });
+
+const cookieFrom = (response) => {
+  const cookie = response.headers.get('set-cookie');
+  assert.ok(cookie, 'auth response should set or clear a session cookie');
+  return cookie.split(';', 1)[0];
+};
 
 const postAppointment = (payload) => fetch(`${baseUrl}/api/appointments`, {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', cookie: administratorCookie },
   body: JSON.stringify(payload)
 });
 
-const patchRecord = (path, payload) => fetch(`${baseUrl}${path}`, {
+const patchRecord = (route, payload, cookie = administratorCookie) => fetch(`${baseUrl}${route}`, {
   method: 'PATCH',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', ...(cookie ? { cookie } : {}) },
   body: JSON.stringify(payload)
 });
 
@@ -57,10 +79,137 @@ test('serves the clinic page and static assets', async () => {
   assert.match(html, /id="agenda-timeline"/);
   assert.doesNotMatch(html, /data-view-target="appointments"/);
   assert.doesNotMatch(html, /data-dashboard-range/);
+  assert.match(html, /id="login-form"/);
+  assert.match(html, /id="register-form"/);
 
   const styles = await get('/styles.css');
   assert.equal(styles.status, 200);
   assert.match(styles.headers.get('content-type'), /text\/css/);
+});
+
+test('registers individual staff accounts, signs in, and enforces clinic roles', async () => {
+  const unauthenticated = await fetch(`${baseUrl}/api/dashboard`);
+  assert.equal(unauthenticated.status, 401);
+
+  const options = await get('/api/auth/options', '');
+  assert.deepEqual(await options.json(), { adminRegistrationEnabled: true });
+
+  const veterinarianRegistration = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Dr. Taylor Morgan',
+      email: 'taylor@example.test',
+      password: veterinarianPassword,
+      role: 'veterinarian',
+      specialty: 'Dermatology'
+    })
+  });
+  assert.equal(veterinarianRegistration.status, 201);
+  veterinarianCookie = cookieFrom(veterinarianRegistration);
+  assert.match(veterinarianRegistration.headers.get('set-cookie'), /HttpOnly/);
+  assert.match(veterinarianRegistration.headers.get('set-cookie'), /SameSite=Lax/);
+  const veterinarian = (await veterinarianRegistration.json()).user;
+  assert.equal(veterinarian.role, 'veterinarian');
+  assert.equal(veterinarian.title, 'Veterinarian · Dermatology');
+  assert.equal('passwordHash' in veterinarian, false);
+
+  const shortPassword = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Short Password',
+      email: 'short@example.test',
+      password: 'short',
+      role: 'veterinarian',
+      specialty: 'General practice'
+    })
+  });
+  assert.equal(shortPassword.status, 400);
+
+  const duplicateEmail = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Another Vet',
+      email: 'TAYLOR@example.test',
+      password: veterinarianPassword,
+      role: 'veterinarian',
+      specialty: 'Surgery'
+    })
+  });
+  assert.equal(duplicateEmail.status, 409);
+
+  const veterinarianLogin = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'TAYLOR@example.test', password: veterinarianPassword })
+  });
+  assert.equal(veterinarianLogin.status, 200);
+  assert.equal((await veterinarianLogin.json()).user.id, veterinarian.id);
+
+  const invalidPassword = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'taylor@example.test', password: crypto.randomBytes(24).toString('base64url') })
+  });
+  assert.equal(invalidPassword.status, 401);
+
+  const invalidAdminRegistration = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Jordan Ellis',
+      email: 'jordan@example.test',
+      password: administratorPassword,
+      role: 'admin',
+      invitationCode: 'wrong-code'
+    })
+  });
+  assert.equal(invalidAdminRegistration.status, 403);
+
+  const administratorRegistration = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Jordan Ellis',
+      email: 'jordan@example.test',
+      password: administratorPassword,
+      role: 'admin',
+      invitationCode: adminInvitationCode
+    })
+  });
+  assert.equal(administratorRegistration.status, 201);
+  administratorCookie = cookieFrom(administratorRegistration);
+  assert.equal((await administratorRegistration.json()).user.role, 'admin');
+
+  const storedAccounts = fs.readFileSync(accountsPath, 'utf8');
+  assert.equal(storedAccounts.includes(veterinarianPassword), false);
+  assert.equal(storedAccounts.includes(administratorPassword), false);
+
+  const veterinarianCannotRegisterPatient = await fetch(`${baseUrl}/api/patients`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie: veterinarianCookie },
+    body: JSON.stringify({ name: 'Moss', species: 'Cat', breed: 'Tabby', owner: 'Jamie Doe' })
+  });
+  assert.equal(veterinarianCannotRegisterPatient.status, 403);
+  assert.equal((await patchRecord('/api/invoices/1043', { status: 'Paid' }, veterinarianCookie)).status, 403);
+  assert.equal((await patchRecord('/api/appointments/67', { status: 'Cancelled' }, veterinarianCookie)).status, 403);
+
+  const signin = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'jordan@example.test', password: administratorPassword })
+  });
+  assert.equal(signin.status, 200);
+  const signinCookie = cookieFrom(signin);
+  assert.equal((await (await get('/api/auth/me', signinCookie)).json()).user.role, 'admin');
+  const signout = await fetch(`${baseUrl}/api/auth/logout`, {
+    method: 'POST',
+    headers: { cookie: signinCookie }
+  });
+  assert.equal(signout.status, 200);
+  assert.equal((await (await get('/api/auth/me', signinCookie)).json()).user, null);
 });
 
 test('returns dashboard and clinic summary data', async () => {
@@ -99,18 +248,10 @@ test('returns searchable records and status-filtered lists', async () => {
   assert.ok(unpaid.every((invoice) => invoice.status === 'Unpaid'));
 });
 
-test('provides separate veterinarian and administrator demo profiles', async () => {
-  const response = await get('/api/profiles');
-  assert.equal(response.status, 200);
-  const profiles = await response.json();
-  assert.deepEqual(profiles.map(({ role }) => role), ['veterinarian', 'admin']);
-  assert.ok(profiles.some((profile) => profile.name === 'Dr. Hannibal Lecter'));
-});
-
 test('registers patients and validates required details', async () => {
   const response = await fetch(`${baseUrl}/api/patients`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', cookie: administratorCookie },
     body: JSON.stringify({
       name: 'Maple',
       species: 'Dog',
@@ -126,7 +267,7 @@ test('registers patients and validates required details', async () => {
 
   const invalid = await fetch(`${baseUrl}/api/patients`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', cookie: administratorCookie },
     body: JSON.stringify({ name: '', species: '', breed: '', owner: '' })
   });
   assert.equal(invalid.status, 400);

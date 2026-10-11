@@ -1,9 +1,11 @@
 const express = require('express');
 const {
-  clinic, profiles, patients, veterinarians, appointments, invoices, toIsoDate, dateFromToday
+  clinic, patients, veterinarians, appointments, invoices, toIsoDate, dateFromToday
 } = require('../data/clinic');
+const { requireAuth, requireRole } = require('./auth');
 
 const router = express.Router();
+router.use(requireAuth);
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK_TIME = /^\d{2}:\d{2}$/;
@@ -42,10 +44,6 @@ const nextAppointmentId = () =>
 
 router.get('/overview', (request, response) => {
   response.json({ clinic });
-});
-
-router.get('/profiles', (request, response) => {
-  response.json(profiles);
 });
 
 // Dashboard summary: four stat cards, the next visits, and clinic facts.
@@ -109,7 +107,7 @@ router.get('/patients', (request, response) => {
   response.json(matches);
 });
 
-router.post('/patients', (request, response) => {
+router.post('/patients', requireRole('admin'), (request, response) => {
   const body = request.body || {};
   const values = Object.fromEntries(Object.entries(validPatientFields)
     .map(([field]) => [field, String(body[field] || '').trim()]));
@@ -215,6 +213,9 @@ router.patch('/appointments/:id', (request, response) => {
   if (!['completed', 'cancelled'].includes(status)) {
     return response.status(400).json({ errors: ['Choose Completed or Cancelled.'] });
   }
+  if (status === 'cancelled' && request.user.role !== 'admin') {
+    return response.status(403).json({ errors: ['Only an administrator can cancel appointments.'] });
+  }
   if (appointment.status !== 'Scheduled') {
     return response.status(409).json({ errors: ['Only scheduled appointments can be updated.'] });
   }
@@ -226,7 +227,7 @@ router.patch('/appointments/:id', (request, response) => {
   return response.json(appointment);
 });
 
-router.patch('/invoices/:id', (request, response) => {
+router.patch('/invoices/:id', requireRole('admin'), (request, response) => {
   const invoice = invoices.find((item) => item.id === Number(request.params.id));
   if (!invoice) return response.status(404).json({ errors: ['Invoice not found.'] });
   if (String(request.body?.status || '').trim().toLowerCase() !== 'paid') {

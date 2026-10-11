@@ -38,11 +38,6 @@ const veterinarians = [
   { id: 5, name: 'Dr. Omar Haddad', specialty: 'Dermatology' }
 ];
 
-const profiles = [
-  { id: 'vet-hannibal', name: 'Dr. Hannibal Lecter', title: 'Lead veterinarian', role: 'veterinarian', initials: 'HL' },
-  { id: 'admin-jordan', name: 'Jordan Ellis', title: 'Clinic administrator', role: 'admin', initials: 'JE' }
-];
-
 const patients = [
   { id: 1, name: 'Daisy', species: 'Dog', breed: 'Golden Retriever', owner: 'Avery Bennett', status: 'Active', lastVisit: toIsoDate(dateFromToday(-14)) },
   { id: 2, name: 'Milo', species: 'Dog', breed: 'Beagle', owner: 'Jordan Ellis', status: 'Active', lastVisit: toIsoDate(dateFromToday(-11)) },
@@ -78,7 +73,6 @@ const invoices = [
 
 module.exports = {
   clinic,
-  profiles,
   patients,
   veterinarians,
   appointments,

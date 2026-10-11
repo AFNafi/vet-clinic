@@ -106,13 +106,17 @@ The visual direction was informed by the task-focused, clinician-centered presen
 2026-10-06. These were used only as high-level references for clarity and workflow readability;
 their branding, assets, and product UI were not copied.
 
-## 2026-10-06: Add role-aware demo management workflows without implying authentication
+## 2026-10-11: Protect staff workflows with individual sign-in
 
-The web demo includes separate veterinarian and administrator profiles, patient registration,
-scheduled-appointment completion/cancellation, and invoice payment actions. These actions update
-the same in-memory data used by the dashboard, lists, and booking form. Profile selection only
-controls the demonstration UI; it is not authentication or authorization. A real deployment must
-add server-side identity, role checks, and persistent storage before exposing these mutations.
+Veterinarians register individual accounts; administrator registration requires an invitation code
+provided to the server through `ADMIN_REGISTRATION_CODE`, so visitors cannot grant themselves
+administrator privileges. Passwords are verified with Node's scrypt and only salts and derived
+hashes are stored in an ignored, permission-restricted local account file. Session tokens are
+random, HttpOnly, SameSite cookies and expire after 12 hours. Protected API routes enforce the
+administrator/veterinarian permissions; hiding controls in the UI is not the security boundary.
+Sessions are in-memory and cleared when the demo server restarts. This avoids claiming production
+readiness without durable session storage, HTTPS deployment configuration, account recovery,
+and operational security review.
 
 ## 2026-10-06: Booking dates and times are validated as real calendar values
 

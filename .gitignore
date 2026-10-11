@@ -1,3 +1,6 @@
 *.dmp
 *.log
 .env
+/web/data/staff-accounts.json
+/web/data/staff-accounts.json.*.tmp
+/web/test/.staff-accounts-*.json

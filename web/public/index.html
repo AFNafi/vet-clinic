@@ -8,7 +8,44 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <div class="app-shell">
+    <main class="auth-screen" id="auth-screen" aria-labelledby="auth-title">
+      <a class="brand auth-brand" href="/" aria-label="Vetwise Clinic home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>
+        </span>
+        <span>Vetwise<span>Clinic</span></span>
+      </a>
+      <section class="auth-card">
+        <p class="eyebrow">Staff access</p>
+        <h1 id="auth-title">Welcome back.</h1>
+        <p class="auth-intro">Sign in to your clinic workspace or create an individual staff account.</p>
+        <p class="auth-feedback" id="auth-feedback" role="alert" hidden></p>
+        <form id="login-form" class="auth-form">
+          <label>Email address<input name="email" type="email" maxlength="254" autocomplete="username" required></label>
+          <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+          <button class="primary-button auth-submit" type="submit">Sign in</button>
+          <p class="auth-switch">New to the clinic? <button type="button" data-auth-view="register">Create a staff account</button></p>
+        </form>
+        <form id="register-form" class="auth-form" hidden>
+          <label>Account type
+            <select name="role" id="registration-role">
+              <option value="veterinarian">Veterinarian</option>
+              <option value="admin" id="admin-registration-option" disabled>Administrator · invite setup required</option>
+            </select>
+          </label>
+          <label>Full name<input name="name" type="text" maxlength="80" autocomplete="name" required></label>
+          <label id="specialty-field">Veterinary specialty<input name="specialty" type="text" maxlength="60" placeholder="General practice" required></label>
+          <label id="invitation-field" hidden>Administrator invitation code<input name="invitationCode" type="password" autocomplete="off"></label>
+          <label>Email address<input name="email" type="email" maxlength="254" autocomplete="email" required></label>
+          <label>Password <span class="password-hint">12 characters minimum</span><input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+          <button class="primary-button auth-submit" type="submit">Create account</button>
+          <p class="auth-switch">Already registered? <button type="button" data-auth-view="login">Sign in</button></p>
+        </form>
+        <p class="auth-security-note">Accounts use individual sign-ins. Administrator registration needs an invitation from the clinic owner.</p>
+      </section>
+    </main>
+
+    <div class="app-shell" id="app-shell" hidden>
       <aside class="sidebar" id="main-navigation" aria-label="Main navigation">
         <a class="brand" href="#dashboard-view" data-view="dashboard">
           <span class="brand-mark" aria-hidden="true">
@@ -37,14 +74,9 @@
         <div class="sidebar-footer">
           <div class="staff-avatar" id="profile-avatar" aria-hidden="true">HL</div>
           <div class="profile-details">
-            <strong id="profile-name">Dr. Hannibal Lecter</strong>
-            <small id="profile-title">Lead veterinarian</small>
-            <label class="profile-select-label">Demo profile
-              <select id="profile-select" aria-label="Switch demo profile">
-                <option value="vet-hannibal">Dr. Hannibal Lecter</option>
-                <option value="admin-jordan">Jordan Ellis · Admin</option>
-              </select>
-            </label>
+            <strong id="profile-name"></strong>
+            <small id="profile-title"></small>
+            <button class="logout-button" id="logout-button" type="button">Sign out</button>
           </div>
         </div>
       </aside>
