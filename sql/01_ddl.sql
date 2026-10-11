@@ -204,7 +204,7 @@ CREATE TABLE appointment_audit (
     CONSTRAINT pk_appointment_audit PRIMARY KEY (audit_id),
     CONSTRAINT fk_audit_appt FOREIGN KEY (appointment_id)
         REFERENCES appointments (appointment_id),
-    CONSTRAINT ck_audit_action CHECK (action_type IN ('INSERT', 'UPDATE', 'DELETE'))
+    CONSTRAINT ck_audit_action CHECK (action_type IN ('INSERT', 'UPDATE'))
 );
 
 -- Foreign-key indexes.
@@ -225,5 +225,12 @@ CREATE INDEX ix_audit_appt ON appointment_audit (appointment_id);
 CREATE INDEX ix_owners_last_name ON owners (last_name);
 CREATE INDEX ix_appts_date ON appointments (appointment_date);
 CREATE INDEX ix_vaccinations_due_date ON vaccinations (due_date);
+
+-- Only one active scheduled appointment may use a veterinarian's exact time slot.
+-- Completed and cancelled appointments are historical records and may share a time.
+CREATE UNIQUE INDEX uq_appts_scheduled_vet_time ON appointments (
+    CASE WHEN appointment_status = 'SCHEDULED' THEN veterinarian_id END,
+    CASE WHEN appointment_status = 'SCHEDULED' THEN appointment_date END
+);
 
 PROMPT Veterinary Clinic tables, constraints, and indexes created.

@@ -344,18 +344,21 @@ handler closes an open cursor and re-raises the original error.
 
 # 20. Oracle triggers
 
-`sql/06_triggers.sql` defines three triggers. `TRG_APPOINTMENT_AUDIT` runs after insert or
+`sql/06_triggers.sql` defines seven triggers. `TRG_APPOINTMENT_AUDIT` runs after insert or
 updates to selected appointment fields. Oracle's `INSERTING` condition distinguishes a new row
 from a change; `:OLD` and `:NEW` values are recorded with `USER` and `SYSDATE`.
 
-`TRG_REDUCE_MEDICATION_STOCK` runs before prescription insert. It rejects a missing or
-non-positive quantity, then subtracts stock only when sufficient quantity exists. If no row was
-updated, it distinguishes an unknown medicine from insufficient stock and raises a useful
-application error. Its predicate makes negative inventory impossible through this operation.
+`TRG_REDUCE_MEDICATION_STOCK` handles prescription inserts, updates and deletes. It reserves
+stock before an insert or quantity increase, returns stock for a quantity decrease or deletion,
+and reserves a replacement medicine before releasing the old one. Its conditional update makes
+negative inventory impossible through these operations.
 
 `TRG_SET_INVOICE_DATE` supplies `SYSDATE` only if an incoming invoice date is null. The file
-checks compiler errors and runs trigger tests with savepoints/rollback so test mutations do not
-remain in seed data.
+also defines `TRG_VALIDATE_INVOICE_STATUS` and `TRG_SYNC_INVOICE_PAYMENT_STATUS`: non-void
+invoice status must match its payments, payment edits derive the status, and overpayments are
+rejected. Two protection triggers prevent service or prescription changes after the invoice has a
+payment. The file checks compiler errors and runs trigger tests with savepoints/rollback so test
+mutations do not remain in seed data.
 
 <!-- PAGE BREAK -->
 
@@ -378,9 +381,10 @@ DBA action outside this student schema.
 
 # 22. Oracle test suite and rebuild order
 
-`sql/08_tests.sql` contains sixteen numbered automated checks for invalid foreign keys, unique
+`sql/08_tests.sql` contains twenty-two numbered automated checks for invalid foreign keys, unique
 and check constraints, package success and failure, invoice totals, vaccination dates/reminders,
-audit behavior, stock changes and invoice-date defaulting. PL/SQL prints `PASS` or `FAIL`.
+audit behavior, stock changes, invoice-date defaulting, payment lifecycle, and the inclusive
+30-day reporting boundary. PL/SQL prints `PASS` or `FAIL`.
 
 `sql/run_all.sql` is the single orchestration entry point. It stops on `SQLERROR`, disables
 substitution prompts, and executes in dependency order:

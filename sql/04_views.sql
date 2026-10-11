@@ -16,7 +16,8 @@ JOIN pets p ON p.pet_id = a.pet_id
 JOIN owners o ON o.owner_id = p.owner_id
 JOIN veterinarians v ON v.veterinarian_id = a.veterinarian_id
 WHERE a.appointment_status = 'SCHEDULED'
-  AND a.appointment_date BETWEEN TRUNC(SYSDATE) AND TRUNC(SYSDATE) + 30;
+  AND a.appointment_date >= TRUNC(SYSDATE)
+  AND a.appointment_date < TRUNC(SYSDATE) + 31;
 
 -- Non-void invoices that still have a positive outstanding balance.
 CREATE OR REPLACE VIEW vw_owner_outstanding_balances AS
@@ -79,6 +80,7 @@ SELECT va.vaccination_id,
 FROM vaccinations va
 JOIN pets p ON p.pet_id = va.pet_id
 JOIN owners o ON o.owner_id = p.owner_id
-WHERE va.due_date BETWEEN TRUNC(SYSDATE) AND TRUNC(SYSDATE) + 30;
+WHERE va.due_date >= TRUNC(SYSDATE)
+  AND va.due_date < TRUNC(SYSDATE) + 31;
 
 PROMPT Reporting views created.

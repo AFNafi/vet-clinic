@@ -158,7 +158,7 @@ Stores the invoice state for an appointment. Service and prescription line amoun
 | invoice_id | NUMBER | Identity primary key |
 | appointment_id | NUMBER | NOT NULL, UNIQUE, foreign key to `APPOINTMENTS` |
 | invoice_date | DATE | NOT NULL, DEFAULT `SYSDATE` |
-| invoice_status | VARCHAR2(20) | NOT NULL, DEFAULT 'UNPAID', CHECK (`invoice_status` IN ('UNPAID', 'PARTIAL', 'PAID', 'VOID')) |
+| invoice_status | VARCHAR2(20) | NOT NULL, DEFAULT 'UNPAID', CHECK (`invoice_status` IN ('UNPAID', 'PARTIAL', 'PAID', 'VOID')); payment changes derive non-void status |
 | notes | VARCHAR2(500) | Optional |
 
 ### PAYMENTS
@@ -182,7 +182,7 @@ Stores the history of appointment changes. It is filled by a trigger later in th
 |---|---|---|
 | audit_id | NUMBER | Identity primary key |
 | appointment_id | NUMBER | NOT NULL, foreign key to `APPOINTMENTS` |
-| action_type | VARCHAR2(10) | NOT NULL, CHECK (`action_type` IN ('INSERT', 'UPDATE', 'DELETE')) |
+| action_type | VARCHAR2(10) | NOT NULL, CHECK (`action_type` IN ('INSERT', 'UPDATE')) |
 | old_status | VARCHAR2(20) | Optional |
 | new_status | VARCHAR2(20) | Optional |
 | old_appointment_date | DATE | Optional; appointment date before the change |
@@ -212,6 +212,8 @@ Stores the history of appointment changes. It is filled by a trigger later in th
 - Index every foreign-key column: `BREEDS.species_id`, `PETS.owner_id`, `PETS.breed_id`, `APPOINTMENTS.pet_id`, `APPOINTMENTS.veterinarian_id`, `APPOINTMENT_SERVICES.appointment_id`, `APPOINTMENT_SERVICES.service_id`, `PRESCRIPTIONS.appointment_id`, `PRESCRIPTIONS.medication_id`, `VACCINATIONS.pet_id`, `PAYMENTS.invoice_id`, and `APPOINTMENT_AUDIT.appointment_id`.
 - Create an index on `OWNERS.last_name` for owner lookups.
 - Create an index on `APPOINTMENTS.appointment_date` for daily schedules and date searches.
+- Create a function-based unique index that prevents two `SCHEDULED` appointments from using the
+  same veterinarian and exact timestamp.
 - Create an index on `VACCINATIONS.due_date` for vaccination reminders.
 
 ## Scope decisions

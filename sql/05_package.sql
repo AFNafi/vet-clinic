@@ -196,7 +196,8 @@ CREATE OR REPLACE PACKAGE BODY vet_clinic_pkg AS
             FROM vaccinations va
             JOIN pets p ON p.pet_id = va.pet_id
             JOIN owners o ON o.owner_id = p.owner_id
-            WHERE va.due_date BETWEEN TRUNC(SYSDATE) AND TRUNC(SYSDATE) + cp_days_ahead
+            WHERE va.due_date >= TRUNC(SYSDATE)
+              AND va.due_date < TRUNC(SYSDATE) + cp_days_ahead + 1
             ORDER BY va.due_date, p.pet_name;
 
         v_reminder c_reminders%ROWTYPE;
@@ -204,6 +205,10 @@ CREATE OR REPLACE PACKAGE BODY vet_clinic_pkg AS
     BEGIN
         IF p_days_ahead IS NULL OR p_days_ahead < 0 THEN
             RAISE_APPLICATION_ERROR(-20030, 'Days ahead must be zero or greater.');
+        END IF;
+
+        IF p_days_ahead <> TRUNC(p_days_ahead) THEN
+            RAISE_APPLICATION_ERROR(-20031, 'Days ahead must be a whole number.');
         END IF;
 
         OPEN c_reminders(p_days_ahead);

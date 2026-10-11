@@ -1,5 +1,34 @@
 # Design Decisions
 
+## 2026-10-12: Retain appointments and audit only creations and changes
+
+Appointments are clinical history, so administrators do not receive `DELETE` permission for the
+`APPOINTMENTS` table. `APPOINTMENT_AUDIT` now accepts only `INSERT` and `UPDATE` actions. This
+matches its trigger and its foreign key: a retained appointment always has a valid audit trail.
+
+## 2026-10-12: Treat stock and invoice status as derived transaction state
+
+Prescription stock is adjusted for inserts, edits, medication changes, and deletions. This keeps
+`MEDICATIONS.stock_quantity` correct for the full lifecycle of a prescription, rather than only
+when it is first entered.
+
+An invoice's status is checked against its line-item total and recorded payments. Payment changes
+automatically set the status to `UNPAID`, `PARTIAL`, or `PAID`; overpayments and mismatched manual
+statuses are rejected. A void invoice cannot have payments. Service and prescription lines cannot
+be changed after a payment is recorded, preserving the total that was paid.
+
+## 2026-10-12: Use half-open 30-day date ranges
+
+Upcoming-appointment and vaccination queries use a range starting at today's midnight and ending
+before midnight after day 30. This includes every time on the thirtieth day, unlike an inclusive
+upper bound at that day's midnight.
+
+## 2026-10-12: Enforce one active scheduled time slot per veterinarian
+
+A function-based unique index permits only one `SCHEDULED` appointment for the same veterinarian
+and exact timestamp. Completed and cancelled appointments remain valid history and do not occupy
+the live scheduled slot.
+
 ## 2026-10-06: Use all 14 required tables
 
 The project uses the 14 tables listed in the requirements. The earlier 9–12-table target was not sufficient because the required `APPOINTMENT_SERVICES` and `APPOINTMENT_AUDIT` tables must both exist.

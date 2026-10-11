@@ -43,7 +43,7 @@ error.
 
 ### Expected result
 
-Every test prints `PASS` or `FAIL` through `DBMS_OUTPUT` (23 `PASS` messages and no `FAIL`), and
+Every test prints `PASS` or `FAIL` through `DBMS_OUTPUT` (34 `PASS` messages and no `FAIL`), and
 the run ends with:
 
 ```text

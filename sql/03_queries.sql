@@ -26,21 +26,31 @@ GROUP BY p.pet_id, p.pet_name, o.first_name, o.last_name
 ORDER BY appointment_count, p.pet_name;
 
 -- Q3. What services and prescribed medications were recorded for each completed appointment?
+-- UNION ALL keeps service and medication rows separate, avoiding a many-to-many row multiplication.
 SELECT a.appointment_id,
        a.appointment_date,
        p.pet_name,
-       s.service_name,
-       aps.quantity AS service_quantity,
-       m.medication_name,
-       pr.quantity AS medication_quantity
+       'SERVICE' AS item_type,
+       s.service_name AS item_name,
+       aps.quantity
 FROM appointments a
 JOIN pets p ON p.pet_id = a.pet_id
 JOIN appointment_services aps ON aps.appointment_id = a.appointment_id
 JOIN services s ON s.service_id = aps.service_id
-LEFT JOIN prescriptions pr ON pr.appointment_id = a.appointment_id
-LEFT JOIN medications m ON m.medication_id = pr.medication_id
 WHERE a.appointment_status = 'COMPLETED'
-ORDER BY a.appointment_date DESC, p.pet_name;
+UNION ALL
+SELECT a.appointment_id,
+       a.appointment_date,
+       p.pet_name,
+       'MEDICATION' AS item_type,
+       m.medication_name AS item_name,
+       pr.quantity
+FROM appointments a
+JOIN pets p ON p.pet_id = a.pet_id
+JOIN prescriptions pr ON pr.appointment_id = a.appointment_id
+JOIN medications m ON m.medication_id = pr.medication_id
+WHERE a.appointment_status = 'COMPLETED'
+ORDER BY appointment_date DESC, pet_name, item_type, item_name;
 
 -- Q4. Which veterinarians completed more than five appointments?
 SELECT v.veterinarian_id,
@@ -129,7 +139,8 @@ FROM appointments a
 JOIN pets p ON p.pet_id = a.pet_id
 JOIN veterinarians v ON v.veterinarian_id = a.veterinarian_id
 WHERE a.appointment_status = 'SCHEDULED'
-  AND a.appointment_date BETWEEN TRUNC(SYSDATE) AND TRUNC(SYSDATE) + 30
+  AND a.appointment_date >= TRUNC(SYSDATE)
+  AND a.appointment_date < TRUNC(SYSDATE) + 31
 ORDER BY a.appointment_date, p.pet_name;
 
 -- Q9. How does each veterinarian rank by completed appointment count?
@@ -202,7 +213,8 @@ SELECT p.pet_name,
 FROM vaccinations va
 JOIN pets p ON p.pet_id = va.pet_id
 JOIN owners o ON o.owner_id = p.owner_id
-WHERE va.due_date BETWEEN TRUNC(SYSDATE) AND TRUNC(SYSDATE) + 30
+WHERE va.due_date >= TRUNC(SYSDATE)
+  AND va.due_date < TRUNC(SYSDATE) + 31
 ORDER BY va.due_date, p.pet_name;
 
 -- Q14. What amount has each invoice received, including invoices with no payments?
@@ -240,7 +252,8 @@ WHERE EXISTS (
     FROM pets p
     JOIN vaccinations va ON va.pet_id = p.pet_id
     WHERE p.owner_id = o.owner_id
-      AND va.due_date BETWEEN TRUNC(SYSDATE) AND TRUNC(SYSDATE) + 30
+      AND va.due_date >= TRUNC(SYSDATE)
+      AND va.due_date < TRUNC(SYSDATE) + 31
 )
 ORDER BY owner_name;
 

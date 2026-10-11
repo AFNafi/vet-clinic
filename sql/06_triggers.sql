@@ -53,31 +53,134 @@ END;
 /
 
 CREATE OR REPLACE TRIGGER trg_reduce_medication_stock
-BEFORE INSERT ON prescriptions
-FOR EACH ROW
-DECLARE
-    v_medication_count NUMBER;
-BEGIN
-    IF :NEW.quantity IS NULL OR :NEW.quantity <= 0 THEN
-        RAISE_APPLICATION_ERROR(-20040, 'Prescription quantity must be greater than zero.');
-    END IF;
+FOR INSERT OR UPDATE OR DELETE ON prescriptions
+COMPOUND TRIGGER
 
-    UPDATE medications
-    SET stock_quantity = stock_quantity - :NEW.quantity
-    WHERE medication_id = :NEW.medication_id
-      AND stock_quantity >= :NEW.quantity;
-
-    IF SQL%ROWCOUNT = 0 THEN
-        SELECT COUNT(*)
-        INTO v_medication_count
-        FROM medications
-        WHERE medication_id = :NEW.medication_id;
-
-        IF v_medication_count = 0 THEN
-            RAISE_APPLICATION_ERROR(-20041, 'The selected medication does not exist.');
+    PROCEDURE remove_from_stock (
+        p_medication_id IN NUMBER,
+        p_quantity      IN NUMBER
+    ) IS
+        v_medication_count NUMBER;
+    BEGIN
+        IF p_medication_id IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20041, 'A medication ID is required.');
         END IF;
 
-        RAISE_APPLICATION_ERROR(-20042, 'Prescription would make medication stock negative.');
+        IF p_quantity IS NULL OR p_quantity <= 0 THEN
+            RAISE_APPLICATION_ERROR(-20040, 'Prescription quantity must be greater than zero.');
+        END IF;
+
+        UPDATE medications
+        SET stock_quantity = stock_quantity - p_quantity
+        WHERE medication_id = p_medication_id
+          AND stock_quantity >= p_quantity;
+
+        IF SQL%ROWCOUNT = 0 THEN
+            SELECT COUNT(*)
+            INTO v_medication_count
+            FROM medications
+            WHERE medication_id = p_medication_id;
+
+            IF v_medication_count = 0 THEN
+                RAISE_APPLICATION_ERROR(-20041, 'The selected medication does not exist.');
+            END IF;
+
+            RAISE_APPLICATION_ERROR(-20042, 'Prescription would make medication stock negative.');
+        END IF;
+    END remove_from_stock;
+
+    PROCEDURE return_to_stock (
+        p_medication_id IN NUMBER,
+        p_quantity      IN NUMBER
+    ) IS
+    BEGIN
+        UPDATE medications
+        SET stock_quantity = stock_quantity + p_quantity
+        WHERE medication_id = p_medication_id;
+
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20041, 'The selected medication does not exist.');
+        END IF;
+    END return_to_stock;
+
+    BEFORE EACH ROW IS
+    BEGIN
+        IF INSERTING THEN
+            remove_from_stock(:NEW.medication_id, :NEW.quantity);
+        ELSIF DELETING THEN
+            return_to_stock(:OLD.medication_id, :OLD.quantity);
+        ELSIF :NEW.medication_id = :OLD.medication_id THEN
+            IF :NEW.quantity > :OLD.quantity THEN
+                remove_from_stock(:NEW.medication_id, :NEW.quantity - :OLD.quantity);
+            ELSIF :NEW.quantity < :OLD.quantity THEN
+                return_to_stock(:OLD.medication_id, :OLD.quantity - :NEW.quantity);
+            END IF;
+        ELSE
+            -- Reserve the replacement medication before releasing the old one.
+            remove_from_stock(:NEW.medication_id, :NEW.quantity);
+            return_to_stock(:OLD.medication_id, :OLD.quantity);
+        END IF;
+    END BEFORE EACH ROW;
+END trg_reduce_medication_stock;
+/
+
+-- A line item becomes financial history as soon as its invoice receives payment.
+CREATE OR REPLACE TRIGGER trg_protect_paid_service_lines
+BEFORE INSERT OR UPDATE OR DELETE ON appointment_services
+FOR EACH ROW
+DECLARE
+    PROCEDURE ensure_unpaid (p_appointment_id IN NUMBER) IS
+        v_payment_count NUMBER;
+    BEGIN
+        SELECT COUNT(*)
+        INTO v_payment_count
+        FROM invoices i
+        JOIN payments py ON py.invoice_id = i.invoice_id
+        WHERE i.appointment_id = p_appointment_id;
+
+        IF v_payment_count > 0 THEN
+            RAISE_APPLICATION_ERROR(
+                -20053, 'Service lines cannot change after the invoice has received payment.'
+            );
+        END IF;
+    END ensure_unpaid;
+BEGIN
+    IF INSERTING OR UPDATING THEN
+        ensure_unpaid(:NEW.appointment_id);
+    END IF;
+
+    IF DELETING OR UPDATING THEN
+        ensure_unpaid(:OLD.appointment_id);
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER trg_protect_paid_prescriptions
+BEFORE INSERT OR UPDATE OR DELETE ON prescriptions
+FOR EACH ROW
+DECLARE
+    PROCEDURE ensure_unpaid (p_appointment_id IN NUMBER) IS
+        v_payment_count NUMBER;
+    BEGIN
+        SELECT COUNT(*)
+        INTO v_payment_count
+        FROM invoices i
+        JOIN payments py ON py.invoice_id = i.invoice_id
+        WHERE i.appointment_id = p_appointment_id;
+
+        IF v_payment_count > 0 THEN
+            RAISE_APPLICATION_ERROR(
+                -20053, 'Prescriptions cannot change after the invoice has received payment.'
+            );
+        END IF;
+    END ensure_unpaid;
+BEGIN
+    IF INSERTING OR UPDATING THEN
+        ensure_unpaid(:NEW.appointment_id);
+    END IF;
+
+    IF DELETING OR UPDATING THEN
+        ensure_unpaid(:OLD.appointment_id);
     END IF;
 END;
 /
@@ -92,13 +195,159 @@ BEGIN
 END;
 /
 
+-- Keep stored invoice status aligned with payment totals. A void invoice may not
+-- have payments; all other statuses are derived from the current payments.
+CREATE OR REPLACE TRIGGER trg_validate_invoice_status
+BEFORE INSERT OR UPDATE OF invoice_status, appointment_id ON invoices
+FOR EACH ROW
+DECLARE
+    v_service_total      NUMBER(10,2);
+    v_prescription_total NUMBER(10,2);
+    v_payment_total      NUMBER(10,2);
+    v_expected_status    VARCHAR2(20);
+BEGIN
+    IF :NEW.invoice_status = 'VOID' THEN
+        IF UPDATING THEN
+            SELECT NVL(SUM(amount), 0)
+            INTO v_payment_total
+            FROM payments
+            WHERE invoice_id = :NEW.invoice_id;
+        ELSE
+            v_payment_total := 0;
+        END IF;
+
+        IF v_payment_total > 0 THEN
+            RAISE_APPLICATION_ERROR(-20050, 'An invoice with payments cannot be voided.');
+        END IF;
+    ELSE
+        SELECT NVL(SUM(quantity * unit_price), 0)
+        INTO v_service_total
+        FROM appointment_services
+        WHERE appointment_id = :NEW.appointment_id;
+
+        SELECT NVL(SUM(quantity * unit_price), 0)
+        INTO v_prescription_total
+        FROM prescriptions
+        WHERE appointment_id = :NEW.appointment_id;
+
+        IF UPDATING THEN
+            SELECT NVL(SUM(amount), 0)
+            INTO v_payment_total
+            FROM payments
+            WHERE invoice_id = :NEW.invoice_id;
+        ELSE
+            v_payment_total := 0;
+        END IF;
+
+        IF v_payment_total > v_service_total + v_prescription_total THEN
+            RAISE_APPLICATION_ERROR(-20051, 'Payments cannot exceed the invoice total.');
+        END IF;
+
+        v_expected_status := CASE
+            WHEN v_payment_total = 0 THEN 'UNPAID'
+            WHEN v_payment_total < v_service_total + v_prescription_total THEN 'PARTIAL'
+            ELSE 'PAID'
+        END;
+
+        IF :NEW.invoice_status <> v_expected_status THEN
+            RAISE_APPLICATION_ERROR(-20052, 'Invoice status must match its payment total.');
+        END IF;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER trg_sync_invoice_payment_status
+FOR INSERT OR UPDATE OR DELETE ON payments
+COMPOUND TRIGGER
+    TYPE invoice_id_set_type IS TABLE OF NUMBER INDEX BY VARCHAR2(40);
+    g_invoice_ids invoice_id_set_type;
+
+    PROCEDURE remember_invoice (p_invoice_id IN NUMBER) IS
+    BEGIN
+        IF p_invoice_id IS NOT NULL THEN
+            g_invoice_ids(TO_CHAR(p_invoice_id, 'TM9')) := p_invoice_id;
+        END IF;
+    END remember_invoice;
+
+    BEFORE EACH ROW IS
+    BEGIN
+        IF INSERTING OR UPDATING THEN
+            remember_invoice(:NEW.invoice_id);
+        END IF;
+
+        IF DELETING OR UPDATING THEN
+            remember_invoice(:OLD.invoice_id);
+        END IF;
+    END BEFORE EACH ROW;
+
+    AFTER STATEMENT IS
+        v_key                VARCHAR2(40);
+        v_invoice_id         NUMBER;
+        v_appointment_id     NUMBER;
+        v_invoice_status     VARCHAR2(20);
+        v_service_total      NUMBER(10,2);
+        v_prescription_total NUMBER(10,2);
+        v_payment_total      NUMBER(10,2);
+    BEGIN
+        v_key := g_invoice_ids.FIRST;
+        WHILE v_key IS NOT NULL LOOP
+            v_invoice_id := g_invoice_ids(v_key);
+
+            SELECT invoice_status, appointment_id
+            INTO v_invoice_status, v_appointment_id
+            FROM invoices
+            WHERE invoice_id = v_invoice_id;
+
+            SELECT NVL(SUM(quantity * unit_price), 0)
+            INTO v_service_total
+            FROM appointment_services
+            WHERE appointment_id = v_appointment_id;
+
+            SELECT NVL(SUM(quantity * unit_price), 0)
+            INTO v_prescription_total
+            FROM prescriptions
+            WHERE appointment_id = v_appointment_id;
+
+            SELECT NVL(SUM(amount), 0)
+            INTO v_payment_total
+            FROM payments
+            WHERE invoice_id = g_invoice_ids(v_key);
+
+            IF v_invoice_status = 'VOID' AND v_payment_total > 0 THEN
+                RAISE_APPLICATION_ERROR(-20050, 'A void invoice cannot receive payments.');
+            END IF;
+
+            IF v_payment_total > v_service_total + v_prescription_total THEN
+                RAISE_APPLICATION_ERROR(-20051, 'Payments cannot exceed the invoice total.');
+            END IF;
+
+            IF v_invoice_status <> 'VOID' THEN
+                UPDATE invoices
+                SET invoice_status = CASE
+                    WHEN v_payment_total = 0 THEN 'UNPAID'
+                    WHEN v_payment_total < v_service_total + v_prescription_total THEN 'PARTIAL'
+                    ELSE 'PAID'
+                END
+                WHERE invoice_id = g_invoice_ids(v_key);
+            END IF;
+
+            v_key := g_invoice_ids.NEXT(v_key);
+        END LOOP;
+    END AFTER STATEMENT;
+END trg_sync_invoice_payment_status;
+/
+
 -- Check trigger compilation errors. No rows means compilation succeeded.
 SELECT type, name, line, position, text
 FROM user_errors
 WHERE type = 'TRIGGER'
   AND name IN (
       'TRG_APPOINTMENT_AUDIT',
+      'TRG_PROTECT_PAID_PRESCRIPTIONS',
+      'TRG_PROTECT_PAID_SERVICE_LINES',
       'TRG_REDUCE_MEDICATION_STOCK',
+      'TRG_SYNC_INVOICE_PAYMENT_STATUS',
+      'TRG_VALIDATE_INVOICE_STATUS',
       'TRG_SET_INVOICE_DATE'
   )
 ORDER BY name, sequence;
@@ -193,10 +442,12 @@ DECLARE
 BEGIN
     SAVEPOINT prescription_trigger_pass;
 
-    SELECT MIN(appointment_id)
+    SELECT MIN(a.appointment_id)
     INTO v_appointment_id
-    FROM appointments
-    WHERE appointment_status = 'COMPLETED';
+    FROM appointments a
+    JOIN invoices i ON i.appointment_id = a.appointment_id
+    WHERE a.appointment_status = 'COMPLETED'
+      AND i.invoice_status = 'UNPAID';
 
     SELECT medication_id, stock_quantity, unit_price
     INTO v_medication_id, v_stock_before, v_unit_price
@@ -232,10 +483,12 @@ DECLARE
 BEGIN
     SAVEPOINT prescription_trigger_fail;
 
-    SELECT MIN(appointment_id)
+    SELECT MIN(a.appointment_id)
     INTO v_appointment_id
-    FROM appointments
-    WHERE appointment_status = 'COMPLETED';
+    FROM appointments a
+    JOIN invoices i ON i.appointment_id = a.appointment_id
+    WHERE a.appointment_status = 'COMPLETED'
+      AND i.invoice_status = 'UNPAID';
 
     SELECT medication_id, stock_quantity, unit_price
     INTO v_medication_id, v_stock, v_unit_price

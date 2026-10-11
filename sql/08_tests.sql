@@ -289,8 +289,11 @@ DECLARE
     v_unit_price NUMBER(10,2);
 BEGIN
     SAVEPOINT test_prescription_trigger_pass;
-    SELECT MIN(appointment_id) INTO v_appointment_id
-    FROM appointments WHERE appointment_status = 'COMPLETED';
+    SELECT MIN(a.appointment_id) INTO v_appointment_id
+    FROM appointments a
+    JOIN invoices i ON i.appointment_id = a.appointment_id
+    WHERE a.appointment_status = 'COMPLETED'
+      AND i.invoice_status = 'UNPAID';
     SELECT medication_id, stock_quantity, unit_price
     INTO v_medication_id, v_stock_before, v_unit_price
     FROM medications WHERE medication_name = 'AmoxiPet';
@@ -322,8 +325,11 @@ DECLARE
     v_unit_price NUMBER(10,2);
 BEGIN
     SAVEPOINT test_prescription_trigger_fail;
-    SELECT MIN(appointment_id) INTO v_appointment_id
-    FROM appointments WHERE appointment_status = 'COMPLETED';
+    SELECT MIN(a.appointment_id) INTO v_appointment_id
+    FROM appointments a
+    JOIN invoices i ON i.appointment_id = a.appointment_id
+    WHERE a.appointment_status = 'COMPLETED'
+      AND i.invoice_status = 'UNPAID';
     SELECT medication_id, stock_quantity, unit_price
     INTO v_medication_id, v_stock, v_unit_price
     FROM medications WHERE medication_name = 'AmoxiPet';
@@ -380,7 +386,261 @@ BEGIN
 END;
 /
 
--- Test 16: reaching this point confirms the full run_all rebuild reached its final test stage.
+-- Test 16: the unique index must block duplicate scheduled veterinarian time slots.
+DECLARE
+    v_appointment_id NUMBER;
+    v_pet_id NUMBER;
+    v_veterinarian_id NUMBER;
+    v_appointment_date DATE;
+BEGIN
+    SAVEPOINT test_scheduled_slot_unique;
+    SELECT appointment_id, pet_id, veterinarian_id, appointment_date
+    INTO v_appointment_id, v_pet_id, v_veterinarian_id, v_appointment_date
+    FROM appointments
+    WHERE appointment_status = 'SCHEDULED'
+    FETCH FIRST 1 ROW ONLY;
+
+    BEGIN
+        INSERT INTO appointments (
+            pet_id, veterinarian_id, appointment_date, appointment_status, reason
+        ) VALUES (
+            v_pet_id, v_veterinarian_id, v_appointment_date, 'SCHEDULED',
+            'Duplicate scheduled-slot test'
+        );
+        DBMS_OUTPUT.PUT_LINE('FAIL: duplicate scheduled veterinarian time was accepted.');
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF SQLCODE = -1 THEN
+                DBMS_OUTPUT.PUT_LINE('PASS: duplicate scheduled veterinarian time was rejected.');
+            ELSE
+                DBMS_OUTPUT.PUT_LINE('FAIL: unexpected scheduled-slot error ' || SQLCODE || '.');
+            END IF;
+    END;
+
+    ROLLBACK TO test_scheduled_slot_unique;
+END;
+/
+
+-- Test 17: prescription insert, edit, and delete must keep stock accurate.
+DECLARE
+    v_appointment_id NUMBER;
+    v_medication_id NUMBER;
+    v_replacement_medication_id NUMBER;
+    v_prescription_id NUMBER;
+    v_stock_before NUMBER(10,2);
+    v_stock_after NUMBER(10,2);
+    v_replacement_stock_before NUMBER(10,2);
+    v_replacement_stock_after NUMBER(10,2);
+    v_unit_price NUMBER(10,2);
+    v_replacement_unit_price NUMBER(10,2);
+BEGIN
+    SAVEPOINT test_prescription_stock_lifecycle;
+    SELECT MIN(a.appointment_id) INTO v_appointment_id
+    FROM appointments a
+    JOIN invoices i ON i.appointment_id = a.appointment_id
+    WHERE a.appointment_status = 'COMPLETED'
+      AND i.invoice_status = 'UNPAID';
+    SELECT medication_id, stock_quantity, unit_price
+    INTO v_medication_id, v_stock_before, v_unit_price
+    FROM medications WHERE medication_name = 'AmoxiPet';
+    SELECT medication_id, stock_quantity, unit_price
+    INTO v_replacement_medication_id, v_replacement_stock_before, v_replacement_unit_price
+    FROM medications WHERE medication_name = 'PainRelief Vet';
+
+    INSERT INTO prescriptions (
+        appointment_id, medication_id, dosage, frequency, duration_days, quantity, unit_price
+    ) VALUES (
+        v_appointment_id, v_medication_id, '1 unit', 'Once daily', 1, 2, v_unit_price
+    ) RETURNING prescription_id INTO v_prescription_id;
+
+    UPDATE prescriptions
+    SET medication_id = v_replacement_medication_id,
+        quantity = 3,
+        unit_price = v_replacement_unit_price
+    WHERE prescription_id = v_prescription_id;
+
+    DELETE FROM prescriptions
+    WHERE prescription_id = v_prescription_id;
+
+    SELECT stock_quantity INTO v_stock_after
+    FROM medications WHERE medication_id = v_medication_id;
+    SELECT stock_quantity INTO v_replacement_stock_after
+    FROM medications WHERE medication_id = v_replacement_medication_id;
+
+    IF v_stock_after = v_stock_before
+       AND v_replacement_stock_after = v_replacement_stock_before THEN
+        DBMS_OUTPUT.PUT_LINE('PASS: prescription edits, medicine changes, and deletion restored stock.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('FAIL: prescription edits left medication stock incorrect.');
+    END IF;
+
+    ROLLBACK TO test_prescription_stock_lifecycle;
+END;
+/
+
+-- Test 18: payment lifecycle must derive invoice status and reject overpayment.
+DECLARE
+    v_invoice_id NUMBER;
+    v_payment_id NUMBER;
+    v_total NUMBER(10,2);
+    v_status VARCHAR2(20);
+BEGIN
+    SAVEPOINT test_payment_lifecycle;
+    SELECT MIN(invoice_id) INTO v_invoice_id
+    FROM invoices
+    WHERE invoice_status = 'UNPAID';
+    v_total := vet_clinic_pkg.calculate_invoice_total(v_invoice_id);
+
+    INSERT INTO payments (invoice_id, amount, payment_method, reference_number)
+    VALUES (v_invoice_id, v_total / 2, 'CARD', 'TEST-PARTIAL')
+    RETURNING payment_id INTO v_payment_id;
+
+    SELECT invoice_status INTO v_status FROM invoices WHERE invoice_id = v_invoice_id;
+    IF v_status = 'PARTIAL' THEN
+        DBMS_OUTPUT.PUT_LINE('PASS: a partial payment set invoice status to PARTIAL.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('FAIL: a partial payment did not set PARTIAL status.');
+    END IF;
+
+    UPDATE payments SET amount = v_total WHERE payment_id = v_payment_id;
+    SELECT invoice_status INTO v_status FROM invoices WHERE invoice_id = v_invoice_id;
+    IF v_status = 'PAID' THEN
+        DBMS_OUTPUT.PUT_LINE('PASS: a full payment set invoice status to PAID.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('FAIL: a full payment did not set PAID status.');
+    END IF;
+
+    BEGIN
+        UPDATE appointment_services
+        SET notes = 'Attempted paid-line edit'
+        WHERE appointment_id = (
+            SELECT appointment_id FROM invoices WHERE invoice_id = v_invoice_id
+        );
+        DBMS_OUTPUT.PUT_LINE('FAIL: a paid invoice service line was changed.');
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF SQLCODE = -20053 THEN
+                DBMS_OUTPUT.PUT_LINE('PASS: paid invoice line items were protected.');
+            ELSE
+                DBMS_OUTPUT.PUT_LINE('FAIL: unexpected paid-line error ' || SQLCODE || '.');
+            END IF;
+    END;
+
+    DELETE FROM payments WHERE payment_id = v_payment_id;
+    SELECT invoice_status INTO v_status FROM invoices WHERE invoice_id = v_invoice_id;
+    IF v_status = 'UNPAID' THEN
+        DBMS_OUTPUT.PUT_LINE('PASS: deleting a payment reset invoice status to UNPAID.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('FAIL: deleting a payment did not reset UNPAID status.');
+    END IF;
+
+    BEGIN
+        INSERT INTO payments (invoice_id, amount, payment_method, reference_number)
+        VALUES (v_invoice_id, v_total + 1, 'CARD', 'TEST-OVERPAY');
+        DBMS_OUTPUT.PUT_LINE('FAIL: overpayment was accepted.');
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF SQLCODE = -20051 THEN
+                DBMS_OUTPUT.PUT_LINE('PASS: overpayment was rejected.');
+            ELSE
+                DBMS_OUTPUT.PUT_LINE('FAIL: unexpected overpayment error ' || SQLCODE || '.');
+            END IF;
+    END;
+
+    ROLLBACK TO test_payment_lifecycle;
+END;
+/
+
+-- Test 19: a manually mismatched invoice status must be rejected.
+DECLARE
+    v_invoice_id NUMBER;
+BEGIN
+    SAVEPOINT test_invoice_status_validation;
+    SELECT MIN(invoice_id) INTO v_invoice_id
+    FROM invoices
+    WHERE invoice_status = 'UNPAID';
+
+    BEGIN
+        UPDATE invoices SET invoice_status = 'PAID' WHERE invoice_id = v_invoice_id;
+        DBMS_OUTPUT.PUT_LINE('FAIL: mismatched invoice status was accepted.');
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF SQLCODE = -20052 THEN
+                DBMS_OUTPUT.PUT_LINE('PASS: mismatched invoice status was rejected.');
+            ELSE
+                DBMS_OUTPUT.PUT_LINE('FAIL: unexpected invoice-status error ' || SQLCODE || '.');
+            END IF;
+    END;
+
+    ROLLBACK TO test_invoice_status_validation;
+END;
+/
+
+-- Test 20: the 30-day window includes appointments later on day 30.
+DECLARE
+    v_pet_id NUMBER;
+    v_veterinarian_id NUMBER;
+    v_appointment_id NUMBER;
+    v_count NUMBER;
+BEGIN
+    SAVEPOINT test_thirty_day_endpoint;
+    SELECT MIN(pet_id) INTO v_pet_id FROM pets;
+    SELECT MIN(veterinarian_id) INTO v_veterinarian_id FROM veterinarians;
+
+    INSERT INTO appointments (
+        pet_id, veterinarian_id, appointment_date, appointment_status, reason
+    ) VALUES (
+        v_pet_id, v_veterinarian_id, TRUNC(SYSDATE) + 30 + 0.75,
+        'SCHEDULED', 'Thirty-day endpoint test'
+    ) RETURNING appointment_id INTO v_appointment_id;
+
+    SELECT COUNT(*) INTO v_count
+    FROM vw_upcoming_appointments
+    WHERE appointment_id = v_appointment_id;
+
+    IF v_count = 1 THEN
+        DBMS_OUTPUT.PUT_LINE('PASS: the 30-day window includes day 30 after midnight.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('FAIL: the 30-day window excluded part of day 30.');
+    END IF;
+
+    ROLLBACK TO test_thirty_day_endpoint;
+END;
+/
+
+-- Test 21: audited appointments must be retained instead of deleted.
+DECLARE
+    v_appointment_id NUMBER;
+    v_pet_id NUMBER;
+    v_veterinarian_id NUMBER;
+BEGIN
+    SAVEPOINT test_appointment_retention;
+    SELECT MIN(pet_id) INTO v_pet_id FROM pets;
+    SELECT MIN(veterinarian_id) INTO v_veterinarian_id FROM veterinarians;
+    INSERT INTO appointments (
+        pet_id, veterinarian_id, appointment_date, appointment_status, reason
+    ) VALUES (
+        v_pet_id, v_veterinarian_id, TRUNC(SYSDATE) + 70,
+        'SCHEDULED', 'Retention test appointment'
+    ) RETURNING appointment_id INTO v_appointment_id;
+
+    BEGIN
+        DELETE FROM appointments WHERE appointment_id = v_appointment_id;
+        DBMS_OUTPUT.PUT_LINE('FAIL: an audited appointment was deleted.');
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF SQLCODE = -2292 THEN
+                DBMS_OUTPUT.PUT_LINE('PASS: audited appointment deletion was blocked.');
+            ELSE
+                DBMS_OUTPUT.PUT_LINE('FAIL: unexpected retention error ' || SQLCODE || '.');
+            END IF;
+    END;
+
+    ROLLBACK TO test_appointment_retention;
+END;
+/
+
+-- Test 22: reaching this point confirms the full run_all rebuild reached its final test stage.
 BEGIN
     DBMS_OUTPUT.PUT_LINE('PASS: full rebuild reached the final test stage.');
 END;

@@ -74,6 +74,22 @@ DECLARE
         EXECUTE IMMEDIATE 'GRANT ' || p_privilege || ' ON ' || p_object ||
                           ' TO ' || p_role_name;
     END grant_to_role;
+
+    PROCEDURE revoke_from_role (
+        p_privilege IN VARCHAR2,
+        p_object    IN VARCHAR2,
+        p_role_name IN VARCHAR2
+    ) IS
+    BEGIN
+        EXECUTE IMMEDIATE 'REVOKE ' || p_privilege || ' ON ' || p_object ||
+                          ' FROM ' || p_role_name;
+    EXCEPTION
+        -- ORA-01927: the privilege was not previously granted by this schema.
+        WHEN OTHERS THEN
+            IF SQLCODE <> -1927 THEN
+                RAISE;
+            END IF;
+    END revoke_from_role;
 BEGIN
     SELECT COUNT(*)
     INTO v_priv_count
@@ -126,14 +142,16 @@ BEGIN
             grant_to_role('EXECUTE', 'vet_clinic_pkg', 'vet');
         END IF;
 
-        -- Admin: full data management plus reporting and audit history.
+        -- Admin: data management, reporting, and audit history. Appointments are retained.
         IF v_admin_ready THEN
             grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'owners', 'admin');
             grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'species', 'admin');
             grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'breeds', 'admin');
             grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'pets', 'admin');
             grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'veterinarians', 'admin');
-            grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'appointments', 'admin');
+            -- Appointments are retained as clinical history and are not deleted.
+            grant_to_role('SELECT, INSERT, UPDATE', 'appointments', 'admin');
+            revoke_from_role('DELETE', 'appointments', 'admin');
             grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'services', 'admin');
             grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'appointment_services', 'admin');
             grant_to_role('SELECT, INSERT, UPDATE, DELETE', 'medications', 'admin');
