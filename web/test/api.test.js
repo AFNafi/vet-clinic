@@ -279,7 +279,7 @@ test('returns searchable records and status-filtered lists', async () => {
 
   const vetsResponse = await get('/api/veterinarians');
   assert.equal(vetsResponse.status, 200);
-  assert.equal((await vetsResponse.json()).length, 5);
+  assert.equal((await vetsResponse.json()).length, 10);
 
   const completedResponse = await get('/api/appointments?status=completed');
   assert.equal(completedResponse.status, 200);

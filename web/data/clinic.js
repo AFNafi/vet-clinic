@@ -31,11 +31,16 @@ const clinic = {
 };
 
 const veterinarians = [
-  { id: 1, name: 'Dr. Maya Chen', specialty: 'Internal medicine' },
-  { id: 2, name: 'Dr. Theo Martin', specialty: 'Surgery' },
-  { id: 3, name: 'Dr. Priya Shah', specialty: 'Dentistry' },
-  { id: 4, name: 'Dr. Lena Novak', specialty: 'Exotic animals' },
-  { id: 5, name: 'Dr. Omar Haddad', specialty: 'Dermatology' }
+  { id: 1, name: 'Dr. Olivia Bennett', email: 'olivia.bennett@vetwise.test', specialty: 'Small Animal Medicine' },
+  { id: 2, name: 'Dr. Ethan Parker', email: 'ethan.parker@vetwise.test', specialty: 'Surgery' },
+  { id: 3, name: 'Dr. Mia Thompson', email: 'mia.thompson@vetwise.test', specialty: 'Dermatology' },
+  { id: 4, name: 'Dr. Noah Williams', email: 'noah.williams@vetwise.test', specialty: 'Cardiology' },
+  { id: 5, name: 'Dr. Ava Johnson', email: 'ava.johnson@vetwise.test', specialty: 'Emergency Care' },
+  { id: 6, name: 'Dr. Liam Anderson', email: 'liam.anderson@vetwise.test', specialty: 'Dentistry' },
+  { id: 7, name: 'Dr. Sophia Martinez', email: 'sophia.martinez@vetwise.test', specialty: 'Feline Medicine' },
+  { id: 8, name: 'Dr. Lucas Brown', email: 'lucas.brown@vetwise.test', specialty: 'Orthopedics' },
+  { id: 9, name: 'Dr. Isabella Davis', email: 'isabella.davis@vetwise.test', specialty: 'Oncology' },
+  { id: 10, name: 'Dr. Mason Wilson', email: 'mason.wilson@vetwise.test', specialty: 'Exotic Animal Medicine' }
 ];
 
 const firstAppointmentDayOffset = dateFromToday(0).getDay() === 0 ? 1 : 0;
@@ -52,16 +57,16 @@ const patients = [
 ];
 
 const appointments = [
-  { id: 61, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '09:00', patientId: 1, patient: 'Daisy', owner: 'Avery Bennett', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Annual wellness exam', status: 'Scheduled' },
-  { id: 62, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '10:30', patientId: 2, patient: 'Milo', owner: 'Jordan Ellis', veterinarianId: 2, veterinarian: 'Dr. Theo Martin', reason: 'Ear check', status: 'Scheduled' },
-  { id: 63, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '11:15', patientId: 3, patient: 'Juniper', owner: 'Morgan Rivera', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Vaccination visit', status: 'Scheduled' },
-  { id: 64, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '13:00', patientId: 4, patient: 'Fig', owner: 'Casey Chen', veterinarianId: 3, veterinarian: 'Dr. Priya Shah', reason: 'Dental check', status: 'Scheduled' },
-  { id: 65, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '14:30', patientId: 5, patient: 'Pip', owner: 'Riley Morgan', veterinarianId: 2, veterinarian: 'Dr. Theo Martin', reason: 'Nail trim', status: 'Scheduled' },
-  { id: 66, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '15:15', patientId: 6, patient: 'Sunny', owner: 'Sam Patel', veterinarianId: 4, veterinarian: 'Dr. Lena Novak', reason: 'Wing examination', status: 'Scheduled' },
-  { id: 67, date: toIsoDate(dateFromToday(firstAppointmentDayOffset + 1)), time: '09:00', patientId: 7, patient: 'Otis', owner: 'Taylor Brooks', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Mobility follow-up', status: 'Scheduled' },
-  { id: 68, date: toIsoDate(dateFromToday(firstAppointmentDayOffset + 1)), time: '10:30', patientId: 8, patient: 'Clover', owner: 'Alexis Kim', veterinarianId: 5, veterinarian: 'Dr. Omar Haddad', reason: 'Skin review', status: 'Scheduled' },
-  { id: 54, date: toIsoDate(dateFromToday(-5)), time: '10:00', patientId: 4, patient: 'Fig', owner: 'Casey Chen', veterinarianId: 1, veterinarian: 'Dr. Maya Chen', reason: 'Routine check-up', status: 'Completed' },
-  { id: 55, date: toIsoDate(dateFromToday(-8)), time: '13:00', patientId: 8, patient: 'Clover', owner: 'Alexis Kim', veterinarianId: 3, veterinarian: 'Dr. Priya Shah', reason: 'Wellness exam', status: 'Completed' }
+  { id: 61, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '09:00', patientId: 1, patient: 'Daisy', owner: 'Avery Bennett', veterinarianId: 1, veterinarian: 'Dr. Olivia Bennett', reason: 'Annual wellness exam', status: 'Scheduled' },
+  { id: 62, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '10:30', patientId: 2, patient: 'Milo', owner: 'Jordan Ellis', veterinarianId: 2, veterinarian: 'Dr. Ethan Parker', reason: 'Ear check', status: 'Scheduled' },
+  { id: 63, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '11:15', patientId: 3, patient: 'Juniper', owner: 'Morgan Rivera', veterinarianId: 3, veterinarian: 'Dr. Mia Thompson', reason: 'Vaccination visit', status: 'Scheduled' },
+  { id: 64, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '13:00', patientId: 4, patient: 'Fig', owner: 'Casey Chen', veterinarianId: 6, veterinarian: 'Dr. Liam Anderson', reason: 'Dental check', status: 'Scheduled' },
+  { id: 65, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '14:30', patientId: 5, patient: 'Pip', owner: 'Riley Morgan', veterinarianId: 7, veterinarian: 'Dr. Sophia Martinez', reason: 'Nail trim', status: 'Scheduled' },
+  { id: 66, date: toIsoDate(dateFromToday(firstAppointmentDayOffset)), time: '15:15', patientId: 6, patient: 'Sunny', owner: 'Sam Patel', veterinarianId: 10, veterinarian: 'Dr. Mason Wilson', reason: 'Wing examination', status: 'Scheduled' },
+  { id: 67, date: toIsoDate(dateFromToday(firstAppointmentDayOffset + 1)), time: '09:00', patientId: 7, patient: 'Otis', owner: 'Taylor Brooks', veterinarianId: 8, veterinarian: 'Dr. Lucas Brown', reason: 'Mobility follow-up', status: 'Scheduled' },
+  { id: 68, date: toIsoDate(dateFromToday(firstAppointmentDayOffset + 1)), time: '10:30', patientId: 8, patient: 'Clover', owner: 'Alexis Kim', veterinarianId: 9, veterinarian: 'Dr. Isabella Davis', reason: 'Skin review', status: 'Scheduled' },
+  { id: 54, date: toIsoDate(dateFromToday(-5)), time: '10:00', patientId: 4, patient: 'Fig', owner: 'Casey Chen', veterinarianId: 4, veterinarian: 'Dr. Noah Williams', reason: 'Routine check-up', status: 'Completed' },
+  { id: 55, date: toIsoDate(dateFromToday(-8)), time: '13:00', patientId: 8, patient: 'Clover', owner: 'Alexis Kim', veterinarianId: 5, veterinarian: 'Dr. Ava Johnson', reason: 'Wellness exam', status: 'Completed' }
 ];
 
 const invoices = [
@@ -73,12 +78,38 @@ const invoices = [
   { id: 1038, patient: 'Sunny', owner: 'Sam Patel', issued: toIsoDate(dateFromToday(-19)), amount: 75, status: 'Paid' }
 ];
 
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const clinicStorePath = process.env.CLINIC_STORE_PATH ||
+  path.join(__dirname, 'clinic-store.json');
+const persistedCollections = { patients, veterinarians, appointments, invoices };
+
+if (fs.existsSync(clinicStorePath)) {
+  const stored = JSON.parse(fs.readFileSync(clinicStorePath, 'utf8'));
+  for (const [name, collection] of Object.entries(persistedCollections)) {
+    if (!Array.isArray(stored[name])) {
+      throw new Error(`Clinic data store is missing its ${name} collection.`);
+    }
+    collection.splice(0, collection.length, ...stored[name]);
+  }
+}
+
+function persistClinicData() {
+  fs.mkdirSync(path.dirname(clinicStorePath), { recursive: true });
+  const temporaryPath = `${clinicStorePath}.${crypto.randomUUID()}.tmp`;
+  fs.writeFileSync(temporaryPath, JSON.stringify(persistedCollections, null, 2), { mode: 0o600 });
+  fs.renameSync(temporaryPath, clinicStorePath);
+  fs.chmodSync(clinicStorePath, 0o600);
+}
+
 module.exports = {
   clinic,
   patients,
   veterinarians,
   appointments,
   invoices,
+  persistClinicData,
   toIsoDate,
   dateFromToday
 };
