@@ -52,6 +52,8 @@ const addCalendarDays = (date, days) => {
   return result;
 };
 const money = (value) => Number(value).toFixed(2);
+const isActiveAppointment = (appointment) =>
+  ['Pending confirmation', 'Confirmed', 'Scheduled'].includes(appointment.status);
 
 function renderDashboard() {
   const { stats, clinic } = state.dashboard;
@@ -65,7 +67,7 @@ function renderDashboard() {
 
   const today = localIsoDate();
   const futureAppointments = state.appointments
-    .filter((appointment) => appointment.status === 'Scheduled' && appointment.date >= today)
+    .filter((appointment) => isActiveAppointment(appointment) && appointment.date >= today)
     .sort((first, second) => `${first.date}T${first.time}`.localeCompare(`${second.date}T${second.time}`));
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = localIsoDate(addCalendarDays(new Date(), index));
@@ -97,7 +99,12 @@ function renderDashboard() {
       <span class="schedule-time">${escapeHtml(appointment.time)}</span>
       <div><strong>${escapeHtml(appointment.patient)}</strong>
         <p>${escapeHtml(appointment.reason)} · ${escapeHtml(appointment.veterinarian)}</p></div>
-      <span class="chip">${prettyDate(appointment.date)}</span>
+      <div class="schedule-meta">
+        <span class="status ${className(appointment.status)}">${escapeHtml(appointment.status)}</span>
+        ${state.user.role === 'veterinarian' && appointment.status === 'Pending confirmation'
+          ? `<button class="table-action" type="button" data-appointment-action="confirmed" data-id="${appointment.id}">Confirm visit</button>`
+          : ''}
+      </div>
     </article>`).join('') || '<p class="empty-state">No upcoming visits booked.</p>';
 
   document.querySelector('#clinic-name').textContent = clinic.name;
@@ -134,9 +141,12 @@ function renderAppointments(rows = state.appointments) {
   actionHeading.hidden = !canManage;
   document.querySelector('#appointments-table-body').innerHTML = rows.map((appointment) => {
     const canComplete = new Date(`${appointment.date}T${appointment.time}:00`) <= now;
-    const actions = appointment.status === 'Scheduled' && canManage
-      ? `<td class="row-actions">${canComplete ? `<button class="table-action" type="button" data-appointment-action="completed" data-id="${appointment.id}">Complete</button>` : ''}
-          ${role === 'admin' ? `<button class="table-action danger-action" type="button" data-appointment-action="cancelled" data-id="${appointment.id}">Cancel</button>` : ''}</td>`
+    const activeAppointment = isActiveAppointment(appointment);
+    const canCompleteAppointment = activeAppointment &&
+      appointment.status !== 'Pending confirmation' && canComplete;
+    const actions = activeAppointment && canManage
+      ? `<td class="row-actions">${canCompleteAppointment ? `<button class="table-action" type="button" data-appointment-action="completed" data-id="${appointment.id}">Complete</button>` : ''}
+          <button class="table-action danger-action" type="button" data-appointment-action="cancelled" data-id="${appointment.id}">Cancel</button></td>`
       : canManage ? '<td></td>' : '';
     return `
     <tr>
@@ -174,6 +184,14 @@ function renderProfile() {
   document.querySelectorAll('.admin-only').forEach((element) => {
     element.hidden = profile.role !== 'admin';
   });
+  const isVeterinarian = profile.role === 'veterinarian';
+  document.querySelector('#dashboard-schedule-label').textContent =
+    isVeterinarian ? 'Your worklist' : 'Daily overview';
+  document.querySelector('#dashboard-schedule-title').textContent =
+    isVeterinarian ? 'Your appointments' : 'Clinic appointments';
+  document.querySelector('#page-title').textContent = isVeterinarian
+    ? `Welcome, ${profile.name}.`
+    : 'Clinic overview.';
   renderAppointments(filterRows(state.appointments, document.querySelector('#appointment-filter').value));
   renderInvoices(filterRows(state.invoices, document.querySelector('#invoice-filter').value));
 }
@@ -191,7 +209,9 @@ function showView(view) {
     else button.removeAttribute('aria-current');
   });
   document.querySelector('#page-title').textContent = {
-    dashboard: 'Good morning, clinic team.',
+    dashboard: state.user?.role === 'veterinarian'
+      ? `Welcome, ${state.user.name}.`
+      : 'Clinic overview.',
     patients: 'Patient records.',
     appointments: 'Appointment schedule.',
     billing: 'Invoices and payments.'
@@ -278,7 +298,7 @@ async function loadClinicData() {
     get('/api/dashboard'),
     get('/api/patients'),
     get('/api/veterinarians'),
-    isAdmin ? get('/api/appointments') : Promise.resolve([]),
+    get('/api/appointments'),
     isAdmin ? get('/api/invoices') : Promise.resolve([])
   ]);
   state.dashboard = dashboard;
@@ -426,7 +446,9 @@ async function updateAppointment(id, status) {
   try {
     await patch(`/api/appointments/${id}`, { status });
     await refreshData();
-    toast(`Appointment marked ${status}.`);
+    toast(status === 'confirmed'
+      ? 'Visit confirmed and added to your schedule.'
+      : `Appointment marked ${status}.`);
   } catch (error) {
     if (error.status) toast(error.fieldErrors.join(' '));
     else showError(error);
@@ -455,7 +477,7 @@ async function refreshData() {
   const [dashboard, patients, appointments, invoices] = await Promise.all([
     get('/api/dashboard'),
     get('/api/patients'),
-    isAdmin ? get('/api/appointments') : Promise.resolve([]),
+    get('/api/appointments'),
     isAdmin ? get('/api/invoices') : Promise.resolve([])
   ]);
   state.dashboard = dashboard;

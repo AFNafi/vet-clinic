@@ -169,6 +169,7 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
   const veterinarian = (await veterinarianRegistration.json()).user;
   assert.equal(veterinarian.role, 'veterinarian');
   assert.equal(veterinarian.title, 'Veterinarian · Dermatology');
+  assert.equal(Number.isInteger(veterinarian.veterinarianId), true);
   assert.equal('passwordHash' in veterinarian, false);
   const rosterAfterRegistration = await (await get('/api/veterinarians', veterinarianCookie)).json();
   const registeredVeterinarian = rosterAfterRegistration.find((item) =>
@@ -257,10 +258,14 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
     body: JSON.stringify({ name: 'Moss', species: 'Cat', breed: 'Tabby', owner: 'Jamie Doe' })
   });
   assert.equal(veterinarianCannotRegisterPatient.status, 403);
-  assert.equal((await get('/api/appointments', veterinarianCookie)).status, 403);
+  const veterinarianAppointments = await get('/api/appointments', veterinarianCookie);
+  assert.equal(veterinarianAppointments.status, 200);
+  assert.deepEqual(await veterinarianAppointments.json(), []);
   assert.equal((await get('/api/invoices', veterinarianCookie)).status, 403);
   const veterinarianDashboard = await (await get('/api/dashboard', veterinarianCookie)).json();
   assert.deepEqual(veterinarianDashboard.stats.map((stat) => stat.label), [
+    'Visits today',
+    'Awaiting your confirmation',
     'Registered patients',
     'Veterinarians'
   ]);
@@ -273,9 +278,9 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
     time: '09:35',
     reason: 'Role check'
   }, veterinarianCookie)).status, 403);
-  assert.equal((await patchRecord('/api/appointments/61', { status: 'Completed' }, veterinarianCookie)).status, 403);
+  assert.equal((await patchRecord('/api/appointments/61', { status: 'Completed' }, veterinarianCookie)).status, 404);
   assert.equal((await patchRecord('/api/invoices/1043', { status: 'Paid' }, veterinarianCookie)).status, 403);
-  assert.equal((await patchRecord('/api/appointments/67', { status: 'Cancelled' }, veterinarianCookie)).status, 403);
+  assert.equal((await patchRecord('/api/appointments/67', { status: 'Cancelled' }, veterinarianCookie)).status, 404);
 
   const signin = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
@@ -291,6 +296,83 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
   });
   assert.equal(signout.status, 200);
   assert.equal((await (await get('/api/auth/me', signinCookie)).json()).user, null);
+});
+
+test('scopes veterinarian schedules and lets only the assigned doctor confirm a visit', async () => {
+  const payload = {
+    patientId: 8,
+    veterinarianId: 12,
+    date: clinicDateFromToday(70),
+    time: '09:35',
+    reason: 'Assigned veterinarian confirmation test'
+  };
+  const createdResponse = await postAppointment(payload);
+  assert.equal(createdResponse.status, 201);
+  const created = await createdResponse.json();
+  assert.equal(created.status, 'Pending confirmation');
+
+  const doctorScheduleResponse = await get('/api/appointments', veterinarianCookie);
+  assert.equal(doctorScheduleResponse.status, 200);
+  const doctorSchedule = await doctorScheduleResponse.json();
+  assert.deepEqual(doctorSchedule.map((appointment) => appointment.id), [created.id]);
+  assert.ok(doctorSchedule.every((appointment) => appointment.veterinarianId === 12));
+
+  const doctorDashboard = await (await get('/api/dashboard', veterinarianCookie)).json();
+  assert.ok(doctorDashboard.upcoming.every((appointment) => appointment.veterinarianId === 12));
+  assert.equal(doctorDashboard.upcoming[0].status, 'Pending confirmation');
+
+  const unrelatedVisit = await patchRecord(
+    '/api/appointments/61',
+    { status: 'Confirmed' },
+    veterinarianCookie
+  );
+  assert.equal(unrelatedVisit.status, 404);
+
+  const unauthorizedCancellation = await patchRecord(
+    `/api/appointments/${created.id}`,
+    { status: 'Cancelled' },
+    veterinarianCookie
+  );
+  assert.equal(unauthorizedCancellation.status, 403);
+
+  const prematureCompletion = await patchRecord(
+    `/api/appointments/${created.id}`,
+    { status: 'Completed' }
+  );
+  assert.equal(prematureCompletion.status, 409);
+
+  const seededVeterinarianLogin = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: seededAccounts[0].email,
+      password: 'unused-seeded-test-password'
+    })
+  });
+  assert.equal(seededVeterinarianLogin.status, 200);
+  const seededVeterinarianCookie = cookieFrom(seededVeterinarianLogin);
+  const otherDoctorSchedule = await (await get('/api/appointments', seededVeterinarianCookie)).json();
+  assert.ok(otherDoctorSchedule.some((appointment) => appointment.id === 61));
+  assert.ok(otherDoctorSchedule.every((appointment) => appointment.veterinarianId === 1));
+  assert.ok(otherDoctorSchedule.every((appointment) => appointment.id !== created.id));
+
+  const confirmed = await patchRecord(
+    `/api/appointments/${created.id}`,
+    { status: 'Confirmed' },
+    veterinarianCookie
+  );
+  assert.equal(confirmed.status, 200);
+  assert.equal((await confirmed.json()).status, 'Confirmed');
+
+  const duplicateConfirmation = await patchRecord(
+    `/api/appointments/${created.id}`,
+    { status: 'Confirmed' },
+    veterinarianCookie
+  );
+  assert.equal(duplicateConfirmation.status, 409);
+
+  const adminSchedule = await (await get('/api/appointments')).json();
+  assert.ok(adminSchedule.some((appointment) => appointment.id === created.id));
 });
 
 test('returns dashboard and clinic summary data', async () => {
@@ -382,7 +464,7 @@ test('books a valid appointment and rejects a duplicate time slot', async () => 
   assert.equal(created.patientId, payload.patientId);
   assert.equal(created.veterinarianId, payload.veterinarianId);
   assert.equal(created.reason, payload.reason);
-  assert.equal(created.status, 'Scheduled');
+  assert.equal(created.status, 'Pending confirmation');
 
   const duplicateResponse = await postAppointment(payload);
   assert.equal(duplicateResponse.status, 409);
@@ -420,6 +502,7 @@ test('admin can schedule every veterinarian with a registered account', async ()
     const appointment = await response.json();
     assert.equal(appointment.veterinarianId, veterinarian.id);
     assert.equal(appointment.veterinarian, veterinarian.name);
+    assert.equal(appointment.status, 'Pending confirmation');
   }
 
   const persisted = JSON.parse(fs.readFileSync(clinicStorePath, 'utf8'));

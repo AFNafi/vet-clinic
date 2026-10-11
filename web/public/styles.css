@@ -834,6 +834,31 @@ tbody tr:hover { background: rgba(146, 208, 185, .07); }
   .agenda-day { padding-right: 1px; padding-left: 1px; border-radius: 10px; }
 }
 
+.schedule-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.status.pending-confirmation {
+  border-color: rgba(250, 194, 146, .2);
+  color: #ffd4b1;
+  background: rgba(129, 75, 45, .35);
+}
+
+.status.confirmed { color: #b9efd7; background: rgba(54, 112, 86, .42); }
+
+@media (max-width: 600px) {
+  .schedule-meta {
+    grid-column: 2;
+    justify-self: start;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: -5px;
+  }
+}
+
 .dashboard-grid { grid-template-columns: minmax(0, 1.55fr) minmax(260px, .8fr); }
 .stat-card, .panel, .clinic-card {
   border-color: rgba(222, 237, 252, .1);

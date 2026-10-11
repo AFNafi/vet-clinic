@@ -101,9 +101,9 @@
         <section class="view active" id="dashboard-view" aria-labelledby="page-title">
           <div class="summary-grid" id="summary-grid" aria-live="polite"></div>
           <div class="dashboard-grid">
-            <section class="panel appointments-panel admin-only" hidden>
+            <section class="panel appointments-panel">
               <div class="panel-heading">
-                <div><p class="eyebrow">Daily overview</p><h2>Appointments</h2></div>
+                <div><p class="eyebrow" id="dashboard-schedule-label">Daily overview</p><h2 id="dashboard-schedule-title">Appointments</h2></div>
               </div>
               <div class="agenda-controls">
                 <div class="agenda-timeline" id="agenda-timeline" role="group" aria-label="Appointments by day"></div>
@@ -147,9 +147,9 @@
             <div>
               <p class="eyebrow">Clinic schedule</p>
               <h2 id="appointments-heading">Appointments</h2>
-              <p>Scheduled and completed visits.</p>
+              <p>Requests, confirmed, and completed visits.</p>
             </div>
-            <label class="select-field">Show <select id="appointment-filter"><option value="all">All appointments</option><option value="scheduled">Scheduled</option><option value="completed">Completed</option></select></label>
+            <label class="select-field">Show <select id="appointment-filter"><option value="all">All appointments</option><option value="pending confirmation">Awaiting confirmation</option><option value="confirmed">Confirmed</option><option value="scheduled">Legacy scheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label>
           </div>
           <section class="panel table-panel">
             <div class="table-wrap"><table>

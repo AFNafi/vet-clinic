@@ -50,7 +50,9 @@ codes in project files.
 
 ## Try the demo features
 
-- The dashboard loads its stat cards, daily visits, and clinic facts from `GET /api/dashboard`.
+- The dashboard loads its stat cards, daily visits, and clinic facts from the API. Veterinarians
+  see only the appointments assigned to their linked profile; administrators see the clinic-wide
+  schedule.
 - Select a day on the seven-day agenda strip to inspect that day's visits. Use the Appointments menu
   for the complete schedule; dashboard stat cards are informational, not duplicate navigation.
 - Administrators can use **New appointment** to book a 30-minute visit. Booking accepts Monday
@@ -63,10 +65,11 @@ codes in project files.
   list. Existing roster entries are shown only when they are linked to a veterinarian account.
 - The clinic store saves patient, roster, appointment, and invoice changes locally. It is ignored
   by Git alongside the private staff account hashes.
-- Administrators alone can view/create/change appointments, view invoices, register patients, and
-  mark invoices paid. A visit cannot be completed before its scheduled date and time.
-- Veterinarians can view clinic and patient information. They cannot access the clinic-wide
-  appointment schedule or billing data.
+- Administrators can create and cancel appointments, view the full schedule and invoices, register
+  patients, and mark invoices paid. New bookings wait for the assigned veterinarian's confirmation.
+- Veterinarians see only their assigned appointment list and dashboard. They can confirm their own
+  pending visits, but cannot view another veterinarian's schedule, manage clinic-wide bookings, or
+  access billing data. A visit cannot be completed before its scheduled date and time.
 - API routes enforce sign-in and role checks on the server. Sessions are kept in memory and end
   when the server restarts; account password hashes are kept in the ignored
   `data/staff-accounts.json` file. This local demo is not a production identity system.
@@ -82,7 +85,8 @@ or Oracle database.
 
 The API supports `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`,
 `POST /api/patients`,
-`PATCH /api/appointments/:id` (`Completed` or `Cancelled`), and
+`PATCH /api/appointments/:id` (`Confirmed` by the assigned veterinarian, `Completed` or
+`Cancelled` by an administrator), and
 `PATCH /api/invoices/:id` (`Paid`). Clinic changes are saved to the local ignored
 `data/clinic-store.json` file.
 

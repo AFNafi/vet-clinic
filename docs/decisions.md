@@ -106,21 +106,21 @@ The visual direction was informed by the task-focused, clinician-centered presen
 2026-10-06. These were used only as high-level references for clarity and workflow readability;
 their branding, assets, and product UI were not copied.
 
-## 2026-10-11: Limit appointments and billing to administrators
+## 2026-10-11: Scope veterinarian schedules and require confirmation
 
-Only administrators can read, create, or update appointments and read or update invoices. The
-current staff accounts do not have a trusted link to veterinarian roster records, so allowing a
-veterinarian to act on appointments cannot be safely scoped to their own schedule. Veterinarian
-dashboards therefore omit schedule and financial summaries, and the browser does not request
-those records for veterinarian sessions. The API enforces the same boundary independently of
-the interface.
+Each veterinarian account is linked to one veterinarian profile. The API returns only that
+profile's appointments to the veterinarian, while administrators retain the clinic-wide schedule
+and billing access. New bookings begin as `Pending confirmation`; only the assigned veterinarian
+can confirm one. Administrators can cancel active appointments and complete confirmed or legacy
+`Scheduled` visits only after their scheduled time. The dashboard uses the role-scoped schedule,
+so veterinarians can review and confirm their own upcoming visits without seeing another doctor's
+appointments. The API enforces these permissions independently of the interface.
 
 Staff self-registration requires role-appropriate invitation codes, preventing anonymous visitors
 from creating veterinarian accounts. Booking enforces the clinic's published Monday-Saturday
 hours, five-minute start-time increments, and a 30-minute appointment duration. It prevents
 overlapping visits for either a veterinarian or patient and rejects same-day appointments in the
-past. Appointment completion is rejected before its scheduled date and time. A newly registered
-patient has no last-visit date until an actual visit is recorded.
+past. A newly registered patient has no last-visit date until an actual visit is recorded.
 
 ## 2026-10-11: Keep veterinarian profiles linked to staff accounts
 

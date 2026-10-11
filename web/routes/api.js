@@ -11,6 +11,9 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK_TIME = /^\d{2}:\d{2}$/;
 const MAX_REASON_LENGTH = 120; // Matches maxlength on the booking form input.
 const APPOINTMENT_DURATION_MINUTES = 30;
+const ACTIVE_APPOINTMENT_STATUSES = new Set([
+  'Pending confirmation', 'Confirmed', 'Scheduled'
+]);
 const validPatientFields = {
   name: ['Patient name', 60],
   species: ['Species', 40],
@@ -64,40 +67,45 @@ router.get('/dashboard', (request, response) => {
   const isAdmin = request.user.role === 'admin';
   const activeVeterinarians = getVeterinarianRoster();
   const activeVeterinarianIds = new Set(activeVeterinarians.map((item) => item.id));
-  const upcoming = isAdmin
-    ? appointments
-      .filter((appointment) => appointment.status === 'Scheduled' &&
-        appointment.date >= today &&
-        activeVeterinarianIds.has(appointment.veterinarianId))
-      .sort(bySchedule)
-      .slice(0, 5)
-      .map(({ date, time, patient, reason, veterinarian }) => ({
-        date, time, patient, reason, veterinarian
-      }))
-    : [];
+  const veterinarianId = request.user.veterinarianId;
+  const relevantAppointments = appointments.filter((appointment) =>
+    (isAdmin || appointment.veterinarianId === veterinarianId) &&
+    activeVeterinarianIds.has(appointment.veterinarianId));
+  const upcoming = relevantAppointments
+    .filter((appointment) => appointment.date >= today &&
+      ACTIVE_APPOINTMENT_STATUSES.has(appointment.status))
+    .sort(bySchedule)
+    .slice(0, 20)
+    .map((appointment) => ({ ...appointment }));
 
   const duePatients = patients.filter((patient) => patient.status === 'Vaccination due');
   const openInvoices = isAdmin ? invoices.filter((invoice) => invoice.status !== 'Paid') : [];
   const openTotal = isAdmin ? openInvoices.reduce((sum, invoice) => sum + invoice.amount, 0) : 0;
-  const todayCount = isAdmin
-    ? appointments.filter(
-      (appointment) => appointment.date === today && appointment.status === 'Scheduled'
-        && activeVeterinarianIds.has(appointment.veterinarianId)
-    ).length
-    : 0;
+  const todayCount = relevantAppointments.filter((appointment) =>
+    appointment.date === today &&
+    ACTIVE_APPOINTMENT_STATUSES.has(appointment.status)).length;
+  const pendingCount = relevantAppointments.filter((appointment) =>
+    appointment.date >= today && appointment.status === 'Pending confirmation').length;
+  const doctorPatients = new Set(upcoming.map((appointment) => appointment.patientId)).size;
 
   response.json({
     stats: [
-      ...(isAdmin ? [{
+      {
         label: 'Visits today',
         value: todayCount,
-        detail: 'Select a date to preview visits',
+        detail: isAdmin ? 'Across the clinic schedule' : 'Assigned to you',
         tone: 'blue'
+      },
+      ...(!isAdmin ? [{
+        label: 'Awaiting your confirmation',
+        value: pendingCount,
+        detail: 'Accept visits assigned to you',
+        tone: 'orange'
       }] : []),
       {
         label: 'Registered patients',
-        value: patients.length,
-        detail: `${duePatients.length} need a vaccination`,
+        value: isAdmin ? patients.length : doctorPatients,
+        detail: isAdmin ? `${duePatients.length} need a vaccination` : 'In your upcoming schedule',
         tone: 'green'
       },
       ...(isAdmin ? [{
@@ -113,7 +121,7 @@ router.get('/dashboard', (request, response) => {
         tone: 'purple'
       }
     ],
-    upcoming: isAdmin ? upcoming : [],
+    upcoming,
     clinic
   });
 });
@@ -162,7 +170,9 @@ router.get('/veterinarians', (request, response) => {
   response.json(getVeterinarianRoster());
 });
 
-router.get('/appointments', requireRole('admin'), (request, response) => {
+router.get('/appointments', (request, response) => {
+  const isAdmin = request.user.role === 'admin';
+  const veterinarianId = request.user.veterinarianId;
   const activeVeterinarianIds = new Set(getVeterinarianRoster().map((item) => item.id));
   const status = String(request.query.status || 'all').toLowerCase();
   const matches = status === 'all'
@@ -170,7 +180,8 @@ router.get('/appointments', requireRole('admin'), (request, response) => {
     : appointments.filter((appointment) => appointment.status.toLowerCase() === status);
 
   response.json(matches.filter((appointment) =>
-    activeVeterinarianIds.has(appointment.veterinarianId)).sort(bySchedule));
+    activeVeterinarianIds.has(appointment.veterinarianId) &&
+    (isAdmin || appointment.veterinarianId === veterinarianId)).sort(bySchedule));
 });
 
 router.get('/invoices', requireRole('admin'), (request, response) => {
@@ -214,7 +225,7 @@ router.post('/appointments', requireRole('admin'), (request, response) => {
 
   const startTime = new Date(`${date}T${time}:00`).getTime();
   const overlaps = (appointment) => appointment.date === date &&
-    appointment.status === 'Scheduled' &&
+    ACTIVE_APPOINTMENT_STATUSES.has(appointment.status) &&
     Math.abs(new Date(`${appointment.date}T${appointment.time}:00`).getTime() - startTime) <
       APPOINTMENT_DURATION_MINUTES * 60 * 1000;
   const clash = appointments.find((appointment) =>
@@ -246,7 +257,7 @@ router.post('/appointments', requireRole('admin'), (request, response) => {
     veterinarianId: veterinarian.id,
     veterinarian: veterinarian.name,
     reason,
-    status: 'Scheduled'
+    status: 'Pending confirmation'
   };
 
   appointments.push(appointment);
@@ -259,23 +270,41 @@ router.post('/appointments', requireRole('admin'), (request, response) => {
   return response.status(201).json(appointment);
 });
 
-router.patch('/appointments/:id', requireRole('admin'), (request, response) => {
+router.patch('/appointments/:id', (request, response) => {
   const appointment = appointments.find((item) => item.id === Number(request.params.id));
   if (!appointment) return response.status(404).json({ errors: ['Appointment not found.'] });
 
   const status = String(request.body?.status || '').trim().toLowerCase();
-  if (!['completed', 'cancelled'].includes(status)) {
+  const isAdmin = request.user.role === 'admin';
+  if (!isAdmin && appointment.veterinarianId !== request.user.veterinarianId) {
+    return response.status(404).json({ errors: ['Appointment not found.'] });
+  }
+  if (status === 'confirmed' && !isAdmin) {
+    if (appointment.status !== 'Pending confirmation') {
+      return response.status(409).json({ errors: ['Only visits awaiting confirmation can be accepted.'] });
+    }
+  } else if (!isAdmin) {
+    return response.status(403).json({ errors: ['Your account cannot perform this action.'] });
+  } else if (!['completed', 'cancelled'].includes(status)) {
     return response.status(400).json({ errors: ['Choose Completed or Cancelled.'] });
   }
-  if (appointment.status !== 'Scheduled') {
-    return response.status(409).json({ errors: ['Only scheduled appointments can be updated.'] });
+  if (isAdmin && !ACTIVE_APPOINTMENT_STATUSES.has(appointment.status)) {
+    return response.status(409).json({ errors: ['Only active appointments can be updated.'] });
   }
-  if (status === 'completed' && new Date(`${appointment.date}T${appointment.time}:00`) > new Date()) {
+  if (isAdmin && status === 'completed' && appointment.status === 'Pending confirmation') {
+    return response.status(409).json({ errors: ['A veterinarian must confirm this appointment before it can be completed.'] });
+  }
+  if (isAdmin && status === 'completed' &&
+      new Date(`${appointment.date}T${appointment.time}:00`) > new Date()) {
     return response.status(409).json({ errors: ['An appointment cannot be completed before its scheduled time.'] });
   }
 
   const previousStatus = appointment.status;
-  appointment.status = status === 'completed' ? 'Completed' : 'Cancelled';
+  appointment.status = status === 'confirmed'
+    ? 'Confirmed'
+    : status === 'completed'
+      ? 'Completed'
+      : 'Cancelled';
   try {
     persistClinicData();
   } catch (error) {

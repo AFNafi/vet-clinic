@@ -117,7 +117,8 @@ function publicAccount(account) {
     name: account.name,
     title: account.title,
     role: account.role,
-    initials: account.initials
+    initials: account.initials,
+    ...(account.role === 'veterinarian' ? { veterinarianId: account.veterinarianId } : {})
   };
 }
 
