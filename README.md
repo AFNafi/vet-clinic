@@ -4,7 +4,8 @@ A database system for a small veterinary clinic, built for Oracle Database Free 
 owners, pets, veterinarians, appointments, services, medications, prescriptions, vaccinations,
 invoices and payments, and demonstrates Oracle SQL, PL/SQL, security and testing.
 
-An optional Express demo dashboard lives in `web/` and runs on fictional in-memory data.
+An optional Express demo dashboard lives in `web/` and uses a separate fictional local JSON
+store. The website does not currently connect to Oracle.
 
 ## What is in the project
 
@@ -18,6 +19,14 @@ The fourteen tables are `OWNERS`, `SPECIES`, `BREEDS`, `PETS`, `VETERINARIANS`, 
 `SERVICES`, `APPOINTMENT_SERVICES`, `MEDICATIONS`, `PRESCRIPTIONS`, `VACCINATIONS`, `INVOICES`,
 `PAYMENTS` and `APPOINTMENT_AUDIT`. See [docs/design.md](docs/design.md) and
 [docs/erd.md](docs/erd.md) for the columns, constraints and relationships.
+
+## Handover guides
+
+- [User guide PDF](docs/user-guide.pdf) - website instructions for administrators and veterinarians.
+- [Technical handover PDF](docs/technical-handover.pdf) - project architecture, files, SQL,
+  web/API flow, tests and limitations (58 pages).
+- Editable Markdown sources and the PDF builder are in `docs/`. Regenerate both PDFs on macOS
+  with `node docs/build_pdf_guides.js`.
 
 ## Rebuild the database
 
