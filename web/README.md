@@ -53,8 +53,10 @@ codes in project files.
 - The dashboard loads its stat cards, daily visits, and clinic facts from the API. Veterinarians
   see only the appointments assigned to their linked profile; administrators see the clinic-wide
   schedule.
-- Select a day on the seven-day agenda strip to inspect that day's visits. Use the Appointments menu
-  for the complete schedule; dashboard stat cards are informational, not duplicate navigation.
+- Administrators can select a day on the seven-day agenda strip to inspect clinic visits.
+  Veterinarians see all of their upcoming assigned visits in one worklist, including appointments
+  beyond the next seven days, and can confirm pending visits directly from that list.
+  Dashboard stat cards are informational, not duplicate navigation.
 - Administrators can use **New appointment** to book a 30-minute visit. Booking accepts Monday
   through Saturday, 08:00-17:30, in five-minute start-time increments; the same veterinarian or
   patient cannot have overlapping scheduled visits.

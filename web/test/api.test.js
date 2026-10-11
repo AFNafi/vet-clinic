@@ -301,37 +301,51 @@ test('registers individual staff accounts, signs in, and enforces clinic roles',
 test('scopes veterinarian schedules and lets only the assigned doctor confirm a visit', async () => {
   const payload = {
     patientId: 8,
-    veterinarianId: 12,
+    veterinarianId: 11,
     date: clinicDateFromToday(70),
     time: '09:35',
-    reason: 'Assigned veterinarian confirmation test'
+    reason: 'Maya long-range confirmation test'
   };
+  assert.ok(payload.date > dateFromToday(7), 'the visit should be outside the dashboard week');
   const createdResponse = await postAppointment(payload);
   assert.equal(createdResponse.status, 201);
   const created = await createdResponse.json();
   assert.equal(created.status, 'Pending confirmation');
 
-  const doctorScheduleResponse = await get('/api/appointments', veterinarianCookie);
+  const mayaLogin = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: seededAccounts[10].email,
+      password: 'unused-seeded-test-password'
+    })
+  });
+  assert.equal(mayaLogin.status, 200);
+  const mayaCookie = cookieFrom(mayaLogin);
+
+  const doctorScheduleResponse = await get('/api/appointments', mayaCookie);
   assert.equal(doctorScheduleResponse.status, 200);
   const doctorSchedule = await doctorScheduleResponse.json();
   assert.deepEqual(doctorSchedule.map((appointment) => appointment.id), [created.id]);
-  assert.ok(doctorSchedule.every((appointment) => appointment.veterinarianId === 12));
+  assert.ok(doctorSchedule.every((appointment) => appointment.veterinarianId === 11));
+  assert.ok(doctorSchedule.some((appointment) =>
+    appointment.date === payload.date && appointment.status === 'Pending confirmation'));
 
-  const doctorDashboard = await (await get('/api/dashboard', veterinarianCookie)).json();
-  assert.ok(doctorDashboard.upcoming.every((appointment) => appointment.veterinarianId === 12));
-  assert.equal(doctorDashboard.upcoming[0].status, 'Pending confirmation');
+  const doctorDashboard = await (await get('/api/dashboard', mayaCookie)).json();
+  assert.ok(doctorDashboard.upcoming.every((appointment) => appointment.veterinarianId === 11));
+  assert.ok(doctorDashboard.upcoming.some((appointment) => appointment.id === created.id));
 
   const unrelatedVisit = await patchRecord(
     '/api/appointments/61',
     { status: 'Confirmed' },
-    veterinarianCookie
+    mayaCookie
   );
   assert.equal(unrelatedVisit.status, 404);
 
   const unauthorizedCancellation = await patchRecord(
     `/api/appointments/${created.id}`,
     { status: 'Cancelled' },
-    veterinarianCookie
+    mayaCookie
   );
   assert.equal(unauthorizedCancellation.status, 403);
 
@@ -341,7 +355,7 @@ test('scopes veterinarian schedules and lets only the assigned doctor confirm a 
   );
   assert.equal(prematureCompletion.status, 409);
 
-  const seededVeterinarianLogin = await fetch(`${baseUrl}/api/auth/login`, {
+  const unrelatedVeterinarianLogin = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -349,17 +363,20 @@ test('scopes veterinarian schedules and lets only the assigned doctor confirm a 
       password: 'unused-seeded-test-password'
     })
   });
-  assert.equal(seededVeterinarianLogin.status, 200);
-  const seededVeterinarianCookie = cookieFrom(seededVeterinarianLogin);
-  const otherDoctorSchedule = await (await get('/api/appointments', seededVeterinarianCookie)).json();
+  assert.equal(unrelatedVeterinarianLogin.status, 200);
+  const unrelatedVeterinarianCookie = cookieFrom(unrelatedVeterinarianLogin);
+  const otherDoctorSchedule = await (await get('/api/appointments', unrelatedVeterinarianCookie)).json();
   assert.ok(otherDoctorSchedule.some((appointment) => appointment.id === 61));
   assert.ok(otherDoctorSchedule.every((appointment) => appointment.veterinarianId === 1));
   assert.ok(otherDoctorSchedule.every((appointment) => appointment.id !== created.id));
 
+  const mayaSchedule = await (await get('/api/appointments', mayaCookie)).json();
+  assert.ok(mayaSchedule.some((appointment) => appointment.id === created.id));
+
   const confirmed = await patchRecord(
     `/api/appointments/${created.id}`,
     { status: 'Confirmed' },
-    veterinarianCookie
+    mayaCookie
   );
   assert.equal(confirmed.status, 200);
   assert.equal((await confirmed.json()).status, 'Confirmed');
@@ -367,7 +384,7 @@ test('scopes veterinarian schedules and lets only the assigned doctor confirm a 
   const duplicateConfirmation = await patchRecord(
     `/api/appointments/${created.id}`,
     { status: 'Confirmed' },
-    veterinarianCookie
+    mayaCookie
   );
   assert.equal(duplicateConfirmation.status, 409);
 

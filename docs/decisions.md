@@ -113,8 +113,10 @@ profile's appointments to the veterinarian, while administrators retain the clin
 and billing access. New bookings begin as `Pending confirmation`; only the assigned veterinarian
 can confirm one. Administrators can cancel active appointments and complete confirmed or legacy
 `Scheduled` visits only after their scheduled time. The dashboard uses the role-scoped schedule,
-so veterinarians can review and confirm their own upcoming visits without seeing another doctor's
-appointments. The API enforces these permissions independently of the interface.
+so veterinarians can review and confirm all their upcoming visits from one worklist, including
+appointments more than seven days away, without seeing another doctor's appointments. The
+dashboard's seven-day date selector remains for the administrator's clinic-wide overview. The API
+enforces these permissions independently of the interface.
 
 Staff self-registration requires role-appropriate invitation codes, preventing anonymous visitors
 from creating veterinarian accounts. Booking enforces the clinic's published Monday-Saturday

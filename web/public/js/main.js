@@ -57,6 +57,7 @@ const isActiveAppointment = (appointment) =>
 
 function renderDashboard() {
   const { stats, clinic } = state.dashboard;
+  const isVeterinarian = state.user.role === 'veterinarian';
 
   document.querySelector('#summary-grid').innerHTML = stats.map((stat) => `
     <article class="stat-card ${className(stat.tone)}">
@@ -88,20 +89,26 @@ function renderDashboard() {
     </button>`;
   }).join('');
 
+  document.querySelector('#agenda-timeline').hidden = isVeterinarian;
   const selectedDate = state.dashboardDate || today;
-  const visibleAppointments = futureAppointments.filter((appointment) => appointment.date === selectedDate);
+  const visibleAppointments = isVeterinarian
+    ? futureAppointments
+    : futureAppointments.filter((appointment) => appointment.date === selectedDate);
   const selectedDateLabel = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' })
     .format(new Date(`${selectedDate}T12:00:00`));
   document.querySelector('#agenda-caption').textContent =
-    `${visibleAppointments.length} ${visibleAppointments.length === 1 ? 'appointment' : 'appointments'} · ${selectedDateLabel}`;
+    isVeterinarian
+      ? `${visibleAppointments.length} upcoming ${visibleAppointments.length === 1 ? 'appointment' : 'appointments'} assigned to you`
+      : `${visibleAppointments.length} ${visibleAppointments.length === 1 ? 'appointment' : 'appointments'} · ${selectedDateLabel}`;
   document.querySelector('#upcoming-list').innerHTML = visibleAppointments.map((appointment) => `
     <article class="schedule-item">
       <span class="schedule-time">${escapeHtml(appointment.time)}</span>
       <div><strong>${escapeHtml(appointment.patient)}</strong>
         <p>${escapeHtml(appointment.reason)} · ${escapeHtml(appointment.veterinarian)}</p></div>
       <div class="schedule-meta">
+        <span class="chip">${prettyDate(appointment.date)}</span>
         <span class="status ${className(appointment.status)}">${escapeHtml(appointment.status)}</span>
-        ${state.user.role === 'veterinarian' && appointment.status === 'Pending confirmation'
+        ${isVeterinarian && appointment.status === 'Pending confirmation'
           ? `<button class="table-action" type="button" data-appointment-action="confirmed" data-id="${appointment.id}">Confirm visit</button>`
           : ''}
       </div>
@@ -188,7 +195,7 @@ function renderProfile() {
   document.querySelector('#dashboard-schedule-label').textContent =
     isVeterinarian ? 'Your worklist' : 'Daily overview';
   document.querySelector('#dashboard-schedule-title').textContent =
-    isVeterinarian ? 'Your appointments' : 'Clinic appointments';
+    isVeterinarian ? 'All upcoming appointments' : 'Clinic appointments';
   document.querySelector('#page-title').textContent = isVeterinarian
     ? `Welcome, ${profile.name}.`
     : 'Clinic overview.';
