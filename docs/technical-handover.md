@@ -16,9 +16,9 @@ tables, data, queries, views, PL/SQL, triggers, security and tests. Pages 22-39 
 interface, server, routes, login, data, design and testing. Pages 40-48 cover documentation,
 operation, handover, known limits and the complete file inventory.
 
-Read the Oracle and web sections independently: they are separate implementations of clinic
-concepts. The browser site is not a visual client of Oracle. The last pages provide runbooks
-and a demonstration path.
+Read the Oracle and web sections independently for their respective workflows. The web API now
+uses the Oracle schema for clinic records and staff accounts; browser code communicates only
+with Express. The last pages provide runbooks and a demonstration path.
 
 The explanations describe each file's major code blocks, inputs, outputs, state changes and
 dependencies. For exact spelling and full syntax, use the linked source files in the repository.
@@ -27,18 +27,17 @@ dependencies. For exact spelling and full syntax, use the linked source files in
 
 # 1. Project at a glance
 
-This repository is a teaching project with two related but independent deliverables.
+This repository is a teaching project with an Oracle database and an Express web application.
 
 1. `sql/` rebuilds a relational veterinary-clinic schema in Oracle Database Free. It demonstrates
    Oracle DDL, sample DML, 18 reporting queries, views, a PL/SQL package, triggers, grants,
    transactions and database tests.
-2. `web/` serves a local fictional staff website using Node.js and Express. It demonstrates
+2. `frontend/` and `backend/` serve a staff website using Node.js and Express. It demonstrates
    sign-in, administrator/veterinarian roles, an appointment workflow, patient search, invoice
-   display and browser rendering.
+   display and browser rendering backed by the Oracle schema.
 
-The web demo stores its own fictional data in local JSON files. It currently does not use the
-Oracle database, the `oracledb` package, a SQL connection, or shared data between the two parts.
-Both parts model a clinic, but they do not synchronize.
+The backend uses Oracle through the `oracledb` package and a server-side connection pool. Existing
+fictional JSON records are retained only as input and backup for a one-time transactional import.
 
 <!-- PAGE BREAK -->
 
@@ -53,10 +52,11 @@ Boundary map:
 * SQLcl sends Oracle-specific SQL and PL/SQL to an Oracle schema.
 * Node listens on a local HTTP port, serves static browser files, and answers JSON API routes.
 * Browser JavaScript calls the JSON API on the same server and turns returned records into UI.
-* Web demo JSON storage and account hashes live only on the computer that runs the server.
+* Express authenticates staff and queries or changes Oracle records through parameterized SQL.
+* The browser never sees database credentials; private settings are read by Express from `.env`.
 
-An Oracle integration would require server-side connection configuration and changed routes. It
-is future work, not an existing feature. No database credentials belong in browser code.
+The website requires Oracle at startup and has no silent local-JSON fallback. No database
+credentials belong in browser code.
 
 <!-- PAGE BREAK -->
 
@@ -68,28 +68,28 @@ metadata file, not application logic.
 
 `sql/` contains ten ordered Oracle scripts. `docs/` contains requirements, database design, the
 ER diagram, normalization, decisions, checklist, backup guide, this handover and user guide.
-`web/` contains its own package manifest, lock file, local environment example and ignore rules,
-server, route modules, demo data, static interface, DOM checker and API tests.
+`frontend/` contains the static interface and DOM checker. `backend/` contains the package manifest, lock file, environment example, Express server, route
+modules, Oracle repository, demo data for migration, database scripts and tests.
 
 The layout separates executable database scripts from the web server and separates public static
 files from server-side route/data modules. Run SQL from the repository root; run the website from
-the `web/` folder.
+the `backend/` folder.
 
 <!-- PAGE BREAK -->
 
 # 4. Configuration, ignored files and data safety
 
 Root `.gitignore` excludes Oracle Data Pump `.dmp` files, `.log` files, `.env`, and the local
-account and clinic-store JSON files (plus their temporary atomic-write files). `web/.gitignore`
+account and clinic-store JSON files (plus their temporary atomic-write files). `backend/.gitignore`
 excludes `node_modules/` and `.env`. These exclusions are intentional: operational credentials
 and local state must not enter Git.
 
-`web/.env.example` documents the local port and warns that future Oracle settings stay server-side.
-It is a template, not a secret file. Never paste real invitation codes or passwords into a
-tracked document, PDF or source file.
+`backend/.env.example` documents the Oracle connection settings and role invitation codes. It is
+a template, not a secret file. Keep the real password and invitation codes only in the ignored
+`backend/.env`; never paste them into a tracked document, PDF or source file.
 
-The test suite generates temporary account and clinic stores under `web/test/`, uses random
-passwords and invitation codes, sets restrictive permissions, and deletes those files afterward.
+Tests use fake data and must not contain database credentials. The one-time migration retains
+the ignored JSON source files as a backup.
 
 <!-- PAGE BREAK -->
 
@@ -97,51 +97,51 @@ passwords and invitation codes, sets restrictive permissions, and deletes those 
 
 Website from a terminal:
 
-    cd web
+    cd backend
     npm install
+    npm run db:check
+    npm run db:migrate
     npm start
 
-Then open `http://localhost:3000`. `npm run dev` uses Node's watch mode. `PORT` can change the
-listener port through a private environment setting. Stop the process with Ctrl+C.
+Configure the private `.env` from `.env.example` first. Run `@sql/09_backend.sql` as `VET` for an
+existing schema; fresh rebuilds include it in `@sql/run_all.sql`. The migration imports the
+existing demo data once and keeps its JSON source files. Then open `http://localhost:3000`.
+`npm run dev` uses Node's watch mode. `PORT` can change the listener port. Stop with Ctrl+C.
 
 Database: connect with SQLcl to a suitable Oracle schema, change the SQLcl working directory to
 the repository root, then run `@sql/run_all.sql`. This is destructive to the named project schema
 objects: the first script drops those objects before rebuilding them. Read the reset warning and
 backup instructions before running it on any schema with data worth preserving.
 
-Neither workflow requires starting the other.
+The website requires the Oracle schema and a successful database connection. Rebuilding with
+`@sql/run_all.sql` is destructive to project tables and removes imported data.
 
 <!-- PAGE BREAK -->
 
 # 6. Web request life cycle
 
-1. Express serves `public/index.html`, CSS and JavaScript from `web/server.js`.
-2. The browser loads `public/js/main.js` as an ES module.
+1. Express serves `frontend/public/index.html`, CSS and JavaScript from `backend/server.js`.
+2. The browser loads `frontend/public/js/main.js` as an ES module.
 3. On startup, it asks for registration options and the current session.
 4. After sign-in, browser requests fetch dashboard, patient, veterinarian, appointment and
    administrator-only invoice records from `/api/...`.
-5. Express routes authenticate the cookie, enforce the role and scope, validate data, update
-   in-memory arrays loaded from the local JSON store, and persist mutations.
+5. Express routes authenticate the cookie, enforce the role and scope, validate data, and use
+   parameterized Oracle queries and transactions.
 6. JSON results return to the browser; render functions refresh the visible list and summary.
 
 The API and static site share one origin, so browser `fetch` sends the same-site session cookie.
-The SQL schema is outside this path.
+The Oracle pool and repository stay inside the backend.
 
 <!-- PAGE BREAK -->
 
 # 7. Persistent state and identity links
 
-`web/data/clinic.js` defines the fictional practice and initial arrays. On server startup it
-overlays persisted arrays from `clinic-store.json` if that local store exists. Writes update the
-arrays and replace a temporary JSON file by rename.
-
-`staff-accounts.json` is a separate ignored account store. It holds random salts and scrypt
-derived hashes, never plaintext passwords. Each veterinarian account is matched to one
-veterinarian profile, and that profile has a stable `veterinarianId`. API ownership checks use
-that ID, not a name typed by the browser.
-
-`clinic.js` and `clinic-store.json` are mutable web data. Oracle tables are a different data
-store with their own identities and constraints.
+`backend/data/clinic.js` defines the fictional practice and initial records consumed by the
+one-time JSON-to-Oracle importer. After migration, clinic changes are stored in Oracle.
+`staff_accounts` stores random salts and scrypt-derived password hashes, never plaintext
+passwords. Each veterinarian account references its veterinarian profile by ID; schedule
+ownership checks use this database relationship rather than a name supplied by the browser.
+Original JSON files are retained as migration backup and are not the live application store.
 
 <!-- PAGE BREAK -->
 
@@ -399,7 +399,7 @@ FAIL messages. SQLcl must be connected to the intended schema and show DBMS_OUTP
 
 # 23. Browser page: `index.html`
 
-`web/public/index.html` is the static structure and accessible labels for the single-page
+`frontend/public/index.html` is the static structure and accessible labels for the single-page
 console. It contains the authentication screen; navigation sidebar; top bar; dashboard summary,
 seven-day admin agenda, worklist and clinic facts; patient table and search; administrator
 appointment table/filter; billing table/filter; booking and patient dialogs; and toast/error
@@ -416,7 +416,7 @@ and does not make direct Oracle queries.
 
 # 24. Browser logic: state and safe rendering
 
-`web/public/js/main.js` keeps one `state` object for the current user, dashboard response,
+`frontend/public/js/main.js` keeps one `state` object for the current user, dashboard response,
 patients, vets, appointments, invoices and selected date. `request()` uses `fetch`, parses JSON,
 turns non-2xx responses into errors, and sends expired sessions back to sign-in.
 
@@ -497,11 +497,11 @@ and refresh functions control it. Empty-state rows describe when no records matc
 
 <!-- PAGE BREAK -->
 
-# 29. Express application: `server.js`
+# 29. Express application: `backend/server.js`
 
-`web/server.js` loads Express, path and dotenv; imports the API and auth routers; creates the app;
-and chooses `PORT` or 3000. `express.json()` parses request bodies, and `express.static()` exposes
-only the `public/` directory for browser assets.
+`backend/server.js` loads Express, path and dotenv; imports the API and auth routers; creates the
+app; and chooses `PORT` or 3000. `express.json()` parses request bodies, and `express.static()`
+exposes only `frontend/public/` for browser assets.
 
 The auth router is mounted at `/api/auth`; the authenticated clinic router is mounted at `/api`.
 An explicit JSON 404 for unknown API paths appears before the catch-all route that serves
@@ -516,7 +516,7 @@ it, they can create an ephemeral test server.
 
 # 30. Authentication bootstrap and account/profile linking
 
-`web/routes/auth.js` creates the auth router and reads an ignored account-store path, or an
+`backend/routes/auth.js` creates the auth router and reads an ignored account-store path, or an
 override used by tests. It loads private invitation codes from environment variables; a role's
 registration option is enabled only when its code is sufficiently long.
 
@@ -569,15 +569,15 @@ inside the transition route because the allowed action depends on the record's a
 
 # 33. API validation helpers and dashboard
 
-`web/routes/api.js` loads the fictional arrays, persistence function and auth guards. Constants
+`backend/routes/api.js` loads the fictional arrays, persistence function and auth guards. Constants
 define ISO date/time shapes, reason length, visit duration and active statuses. `isRealDate`
 rebuilds a local calendar date and reads it back to reject overflow dates. `isRealTime` verifies
 hours, minutes and five-minute increments. `isWithinClinicHours` checks weekday/opening bounds.
 `bySchedule` sorts ISO date/time strings; `nextAppointmentId` selects the next integer ID.
 
-`GET /dashboard` uses the current role and linked roster to choose records, then calculates
-today's count, pending confirmation count, patient count and administrator-only invoice totals.
-Its `upcoming` records are active, future and sorted. The clinic details accompany the response.
+`GET /dashboard` reads records through the Oracle repository, then calculates today's count,
+pending confirmation count, patient count and administrator-only invoice totals. Its `upcoming`
+records are active, future and sorted. The clinic details accompany the response.
 
 <!-- PAGE BREAK -->
 
@@ -585,15 +585,15 @@ Its `upcoming` records are active, future and sorted. The clinic details accompa
 
 `GET /patients` optionally searches all patient fields case-insensitively and returns matching
 records. `POST /patients` is administrator-only: it trims and length-checks required fields,
-assigns an ID, sets Active and a null last-visit date, pushes the record, and persists. If file
-storage fails, it removes the in-memory addition and propagates the error.
+creates owner/species/breed/pet records with Oracle-generated IDs, and commits them in one
+transaction. A new pet has Active status and a null last-visit date.
 
 `GET /veterinarians` returns the auth module's account-backed roster. It does not expose password
 material. The profile ID returned in this roster is the ID that booking submits and the access
 control checks compare.
 
-These handlers use the same array objects that clinic.js hydrates. Persistence is local JSON,
-not a call to the Oracle schema.
+These handlers use Oracle queries through `backend/repositories/clinic.js`; identifiers returned
+to the browser are Oracle IDs.
 
 <!-- PAGE BREAK -->
 
@@ -607,9 +607,9 @@ A visit consumes 30 minutes. For the selected date, active appointment times are
 new start; a conflict less than 30 minutes apart for the same vet returns HTTP 409. The same
 overlap check for patient prevents double booking an animal with another veterinarian.
 
-On success, server code builds one appointment object with stable IDs/names and status Pending
-confirmation. It appends, persists, rolls back the array append if persistence throws, then
-returns HTTP 201 JSON. Status starts pending; the doctor still has to accept it.
+Before insertion, the route locks the selected veterinarian and pet rows so concurrent requests
+cannot independently pass the overlap check. It inserts a Pending confirmation row in Oracle,
+commits, reads the saved row back, and returns HTTP 201 JSON.
 
 <!-- PAGE BREAK -->
 
@@ -624,16 +624,17 @@ Administrators may cancel any active appointment. They may complete Confirmed or
 Scheduled visits only after the appointment start time. They cannot complete a pending request.
 Completed/cancelled appointments cannot be updated again.
 
-Before writing, the handler remembers the previous status. On persistence failure it restores
-that value and rethrows. A successful update returns the record with its canonical status.
+The route locks the appointment row and commits a status update. A successful update returns the
+record with its canonical status.
 
 <!-- PAGE BREAK -->
 
 # 37. API invoice handling and error boundaries
 
-`GET /invoices` and `PATCH /invoices/:id` require administrator role. The list optionally filters
-by status and sorts newest first. Mark paid accepts only a Paid target and rejects duplicate
-payment marking. The handler saves the original status and restores it if persistence fails.
+`GET /invoices` and `PATCH /invoices/:id` require administrator role. The list reads service and
+prescription line totals from Oracle, optionally filters by status, and sorts newest first. Mark
+paid accepts only a Paid target, calculates the outstanding balance, inserts a payment, and lets
+the database trigger update invoice status.
 
 Unknown API paths return JSON 404 from server.js. Invalid JSON also returns JSON 400. The browser
 request helper converts error JSON into a user-readable message; authorization errors are not
@@ -647,7 +648,7 @@ queries.
 
 # 38. Web demo data and atomic persistence
 
-`web/data/clinic.js` defines calendar helpers (`startOfToday`, `dateFromToday`, `toIsoDate`),
+`backend/data/clinic.js` defines calendar helpers (`startOfToday`, `dateFromToday`, `toIsoDate`),
 clinic facts, eleven veterinarian profiles, fictional patient and appointment arrays and invoice
 examples. Dates for initial appointments are relative to the local day so demo records remain
 upcoming after the calendar changes.
@@ -662,7 +663,7 @@ sets file permissions. The module exports shared arrays/helpers.
 
 # 39. Test harness and isolation
 
-`web/test/api.test.js` uses Node's built-in `node:test` and strict assertions. Before importing
+`backend/test/api.test.js` uses Node's built-in `node:test` and strict assertions. Before importing
 the server, it creates unique temporary account/store paths and random invitation/password test
 values in environment variables. It derives hashes for seeded veterinarian accounts, then writes
 the temporary store. This prevents tests from touching a developer's ignored local data.
@@ -688,14 +689,14 @@ The Maya regression test books more than seven days ahead, signs into Maya's see
 checks the server schedule/dashboard include that pending record, checks a different vet cannot
 see it, and confirms it using Maya's session.
 
-`web/check_dom.js` compares JavaScript `querySelector` and `querySelectorAll` references against
-IDs/classes present in `public/index.html`; a missing selector exits nonzero.
+`frontend/check_dom.js` compares JavaScript `querySelector` and `querySelectorAll` references
+against IDs/classes present in `frontend/public/index.html`; a missing selector exits nonzero.
 
 <!-- PAGE BREAK -->
 
 # 41. CSS: visual architecture
 
-`web/public/styles.css` is plain CSS, nearly one thousand lines, organized into layers. The first
+`frontend/public/styles.css` is plain CSS, nearly one thousand lines, organized into layers. The first
 section defines light/base design tokens and component structure. The later dark Liquid Glass
 override changes tokens, colors, translucent surfaces, shadows, focus treatment and statuses.
 The final rule additions style worklist metadata, confirmation statuses and agenda elements.
@@ -726,17 +727,16 @@ the route's server-side check must still reject unauthorized actions.
 
 # 43. Package files and local environment
 
-`web/package.json` names the CommonJS package and defines `start`, `dev` and `test` scripts.
-Runtime dependencies are Express, dotenv and node-oracledb. The current web code does not import
-node-oracledb; it remains an installed declared dependency for a possible future integration.
+`backend/package.json` names the CommonJS package and defines `start`, `dev`, `db:check`,
+`db:migrate` and `test` scripts. Runtime dependencies are Express, dotenv and node-oracledb.
 
-`web/package-lock.json` records exact dependency resolutions and integrity metadata so
+`backend/package-lock.json` records exact dependency resolutions and integrity metadata so
 `npm install` is reproducible. Do not edit the lock file by hand; npm updates it when package
 dependencies change.
 
-`web/.env.example` documents `PORT` and the rule for future database config. `web/.gitignore`
-keeps `node_modules` and real `.env` out of commits. Root README covers Oracle and website
-installation separately.
+`backend/.env.example` documents the Oracle connection, invitation codes and optional `PORT`.
+`backend/.gitignore` keeps `node_modules` and real `.env` out of commits. `db:check` verifies the
+connection; `db:migrate` imports local JSON demo records once.
 
 <!-- PAGE BREAK -->
 
@@ -751,15 +751,14 @@ price snapshots. `docs/checklist.md` tracks requirements and resolved questions.
 preserves design/debug decisions, including role boundaries and the long-range doctor worklist.
 
 `docs/backup.md` explains Oracle Data Pump's server-side DIRECTORY and export/import safety.
-`web/README.md` is the web-specific user/developer run guide.
+`docs/web-demo.md` is the web-specific user/developer run guide.
 
 <!-- PAGE BREAK -->
 
 # 45. Root guides and project rules
 
 `README.md` is the top-level overview and entry point to Oracle rebuild and optional website
-commands. It explicitly says the web demo is a separate local JSON store, not connected to
-Oracle.
+commands. It documents the shared Oracle schema and the one-time local JSON import.
 
 `AGENTS.md` holds project-specific instructions: Oracle Free SQL vocabulary, file locations and
 naming, fresh-schema rebuilds, fake data, no passwords in files and project-folder boundaries.
@@ -805,30 +804,34 @@ owner cannot own a role named `vet`.
 
 # 48. Safe web runbook and troubleshooting
 
-1. From the project root, run `cd web`, `npm install`, then `npm start`.
-2. Keep the server terminal open and browse to `http://localhost:3000`.
-3. Sign in using credentials supplied separately by the local project owner.
-4. For code changes, use `npm test` and `node check_dom.js` from `web/`.
-5. Stop the process with Ctrl+C.
+1. Confirm Oracle is running and the backend extension has been applied. Configure private
+   settings in `backend/.env`.
+2. From the project root, run `cd backend`, `npm install`, `npm run db:check`, and
+   `npm run db:migrate` once before first use.
+3. Run `npm start`, keep the server terminal open, and browse to `http://localhost:3000`.
+4. Sign in using credentials supplied separately by the project owner.
+5. For code changes, run `npm test` from `backend/` with Oracle available and
+   `node frontend/check_dom.js` from the project root.
+6. Stop the process with Ctrl+C.
 
-If login fails, verify account email/password and the local ignored account file. If APIs return
-401, sign in again. If changes vanish, check write permissions and the local clinic JSON path.
-If the page shows stale markup, reload after confirming the server serves the current `web/`
-folder. Do not delete local stores as a debugging shortcut; back them up first.
+If the database check fails, verify the private connection settings and that the Oracle service is
+ready. If the API reports a schema error, apply `@sql/09_backend.sql` as `VET`. If APIs return
+401, sign in again. If the page shows stale markup, reload after confirming the server serves the
+current `frontend/public/` folder. The original JSON files are migration backups, not live state.
 
 <!-- PAGE BREAK -->
 
 # 49. Scope, limitations and honest claims
 
-The web site is a local demo, not an internet deployment. Sessions are in memory, there is no
-durable database, reset/recovery workflow, e-mail delivery, customer-facing portal, payment
-processing, clinical-note editor, prescription workflow, vaccination editor or concurrent
-multi-server coordination.
+The web site is a local demo, not an internet deployment. Oracle stores durable clinic and staff
+records, but sessions are in memory. There is no reset/recovery workflow, e-mail delivery,
+customer-facing portal, payment processor, clinical-note editor, prescription workflow,
+vaccination editor or concurrent multi-server coordination.
 
-The Oracle app and web app have different data, identifiers, statuses and business rules. The
-SQL appointment date column is DATE; web appointments use separate ISO date and time strings.
-Oracle status values are uppercase SCHEDULED/COMPLETED/CANCELLED; the web introduces Pending
-confirmation and Confirmed. These representations must be reconciled before integration.
+The web API maps Oracle IDs, dates and statuses to its browser response shape. SQL appointment
+dates are Oracle DATE values; the API serializes them as ISO date and time strings. Database
+status values are uppercase; the API maps them to display labels such as Pending confirmation
+and Confirmed.
 
 This handover describes verified code, not a guarantee that every production risk has been
 addressed. Do not enter real personal or clinical information.
@@ -839,12 +842,12 @@ addressed. Do not enter real personal or clinical information.
 
 Administrator browser: selects patient, linked vet, local date/time and reason. `main.js` POSTs a
 JSON object to Express. The route authenticates the cookie, requires admin, validates the values,
-checks active overlaps, creates Pending confirmation, persists it and returns JSON.
+checks active overlaps in Oracle, creates Pending confirmation in a transaction and returns JSON.
 
 Veterinarian browser: reloads data. The API uses the session's linked veterinarian ID to return
 only that vet's schedule. The dashboard renders all future assigned visits, even beyond the next
 week. The doctor chooses **Confirm visit**. The PATCH route compares the appointment's assigned
-vet ID to the authenticated account, checks Pending confirmation, changes status, persists, and
+vet ID to the authenticated account, checks Pending confirmation, changes status in Oracle, and
 returns the updated record.
 
 The browser then fetches fresh dashboard and appointment data, which removes the pending action
@@ -861,8 +864,8 @@ and displays Confirmed. Admins can see the same new state on their next refresh.
 * Why check permission in the API as well as hide a button? Users can construct direct requests.
 * Why aggregate before joining invoices? Joining multiple one-to-many line tables first can
   multiply rows and inflate totals.
-* Why isn't the browser connected to Oracle? The web demo has not yet implemented a database
-  adapter; it uses local fictional JSON.
+* Why isn't the browser connected directly to Oracle? Database credentials and queries belong on
+  the server; the browser communicates with Express.
 * Why can roles be skipped? `CREATE ROLE` requires a database-level privilege, and Oracle
   reserves the name when the schema owner is already `VET`.
 
@@ -874,14 +877,14 @@ Before presenting: open the user guide, demonstrate administrator sign-in and bo
 pending record on the assigned doctor's account, confirm it, and show that another veterinarian
 cannot access it. Show the administrator schedule and patient/billing views only if requested.
 
-For the database: explain the 14-table model, runbook safety, query/view examples, package
-procedures, triggers, least-privilege caveat and test output. Do not claim the browser is wired
-to Oracle.
+For the database: explain the 14 core tables and additive backend tables, runbook safety,
+query/view examples, package procedures, triggers, least-privilege caveat and test output. Explain
+that the browser uses Oracle through Express.
 
 Deliver `docs/user-guide.pdf` to site users and `docs/technical-handover.pdf` to the teacher.
-Keep the source Markdown and generator alongside them. Keep local account/store files private.
-Check Git status before handover; do not add `.env`, `staff-accounts.json`, `clinic-store.json`,
-or temporary test files.
+Keep the source Markdown and generator alongside them. Keep `.env` private and retain the local
+JSON migration source as a backup. Check Git status before handover; do not add `.env`, local
+account data or temporary test files.
 
 <!-- PAGE BREAK -->
 
@@ -915,26 +918,29 @@ SQLcl script. All are Oracle SQL/PLSQL, not scripts for the web server.
 
 # Complete file inventory - web server and tests
 
-`web/package.json` declares scripts/dependencies; `package-lock.json` locks their exact graph.
+`backend/package.json` declares scripts/dependencies; `package-lock.json` locks their exact graph.
 `.env.example` is safe configuration guidance; `.gitignore` excludes installed dependencies and
 private environment settings. `README.md` explains local developer operation.
 
-`server.js` configures HTTP middleware and routing. `routes/auth.js` handles identity and roles.
-`routes/api.js` handles clinic API operations. `data/clinic.js` defines/hydrates/persists
-fictional records. `test/api.test.js` tests the HTTP API in isolated temporary stores.
-`check_dom.js` validates UI selector references. None of the ignored local JSON stores is a
-tracked source file or safe handover attachment.
+`backend/server.js` configures HTTP middleware and routing. `backend/routes/auth.js` handles
+identity and roles. `backend/routes/api.js` handles clinic API operations.
+`backend/data/clinic.js` defines fictional migration records. `backend/database.js` manages the
+Oracle pool; `backend/repositories/clinic.js` maps relational records to API objects.
+`backend/scripts/` contains the connection check and transactional migration. The Oracle-backed
+HTTP test uses unique generated fixture data and removes it afterward.
+`frontend/check_dom.js` validates UI selector references. Keep `.env` out of handover material.
 
 <!-- PAGE BREAK -->
 
 # Complete file inventory - browser, artifacts and closing
 
-`web/public/index.html` declares the accessible page and forms. `web/public/js/main.js` loads,
-mutates and renders browser state through JSON. `web/public/styles.css` defines layout, dark
+`frontend/public/index.html` declares the accessible page and forms.
+`frontend/public/js/main.js` loads, mutates and renders browser state through JSON.
+`frontend/public/styles.css` defines layout, dark
 theme, responsive behavior and interaction states.
 
 `docs/user-guide.pdf` explains staff operation. `docs/technical-handover.pdf` explains how the
-project is built and connected (and clearly notes the database/web separation). `docs/user-guide.md`,
+project is built and connected. `docs/user-guide.md`,
 `docs/technical-handover.md` and `docs/build_pdf_guides.js` make both documents maintainable.
 
 For current code behavior, the source files and passing tests are authoritative. When a feature

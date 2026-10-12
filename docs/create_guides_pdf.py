@@ -60,8 +60,8 @@ class ArchitectureDiagram(Flowable):
         labels = [
             ('Browser', 'HTML CSS JS'),
             ('Express', 'auth and API'),
-            ('Local JSON', 'demo store'),
-            ('Oracle', 'separate SQL project')
+            ('Oracle', 'clinic data'),
+            ('JSON files', 'import backup')
         ]
         box_width = 1.46 * inch
         box_height = 0.62 * inch
@@ -84,7 +84,7 @@ class ArchitectureDiagram(Flowable):
                 canvas.line(x + 1.76 * inch, y + box_height / 2, x + 1.67 * inch, y + box_height / 2 - 4)
         canvas.setFillColor(TEXT)
         canvas.setFont('Helvetica-Oblique', 7.5)
-        canvas.drawCentredString(5.95 * inch, 0.15 * inch, 'No live web-to-Oracle connection')
+        canvas.drawCentredString(5.95 * inch, 0.15 * inch, 'Credentials stay on the server')
 
 
 def header_footer(label, total_pages):
@@ -165,10 +165,10 @@ def build_user_guide():
         ['Veterinarian', 'View assigned future visits, search patients, confirm only assigned pending visits.'],
     ], [1.35 * inch, 4.9 * inch]), PageBreak()]
     page(story, '1. Start and sign in', [
-        'From the web folder run npm install once, then npm run dev. Open http://localhost:3000. Sign in with your individual staff email and password.',
+        'From the backend folder run npm install once, then npm run dev. Open http://localhost:3000. Sign in with your individual staff email and password.',
         'New staff registration requires the correct private invitation code. The clinic owner configures it on the server. Do not place invitation codes in files or share a signed-in browser session.',
         'Sessions last up to 12 hours and end after sign-out or a server restart. If the app reports an expired session, sign in again.'
-    ], ['If registration is unavailable, ask the clinic owner to configure the appropriate invitation code.', 'Do not edit staff-accounts.json or clinic-store.json manually.'])
+    ], ['If registration is unavailable, ask the clinic owner to configure the appropriate invitation code.', 'Do not edit the Oracle records or local JSON migration backups manually.'])
     page(story, '2. Dashboard and role boundaries', [
         'Administrators see clinic-wide summary cards, the seven-day agenda, every appointment, patient records, and billing. Selecting a day changes the administrator dashboard list.',
         'Veterinarians see their own future active worklist. They cannot see another doctor’s schedule, access billing, create clinic-wide bookings, or cancel visits.',
@@ -187,8 +187,8 @@ def build_user_guide():
     page(story, '5. Billing, errors, and safe use', [
         'Administrators use Billing to filter invoices and mark an open invoice paid. The web demonstration does not collect payment amount, method, receipt, refund, or card data.',
         'When a request fails, read the message. It normally identifies an incomplete field, date or time rule, appointment overlap, or invalid status transition. Correct the input and try again.',
-        'The web demonstration and Oracle SQL project are separate. Web actions update only local JSON demo data; they do not update Oracle.'
-    ], ['Keep all information fictional.', 'If the page cannot load, confirm the server is running and refresh.', 'Report incorrect records to the clinic owner instead of editing local JSON files.'])
+        'The web application reads and writes clinic records and staff accounts in Oracle through Express. Browser files do not connect directly to Oracle.'
+    ], ['Keep all information fictional.', 'If the page cannot load, confirm the server and Oracle database are running, then refresh.', 'Report incorrect records to the clinic owner instead of editing database or backup files.'])
     story.pop()
     document = SimpleDocTemplate(str(DOCS / 'user-guide.pdf'), pagesize=letter, leftMargin=0.72 * inch,
         rightMargin=0.72 * inch, topMargin=0.76 * inch, bottomMargin=0.62 * inch)
@@ -200,15 +200,15 @@ def build_developer_guide():
     story += [Spacer(1, 0.95 * inch), Paragraph('Vetwise Clinic Developer Handover', styles['GuideTitle'])]
     story += [Paragraph('Architecture, file guide, code blocks, workflows, debugging, and maintenance', styles['GuideSubtitle'])]
     story += [body('This is the developer companion to the project. It explains the purpose and interaction of every runtime file and the important blocks within each file. Read it beside the source when tracing an individual line.')]
-    story += [ArchitectureDiagram(), Spacer(1, 12), body('The key fact is separation: the website uses a fictional local JSON store; the Oracle project is a separate SQL deliverable. No browser-to-Oracle connection exists.') , PageBreak()]
+    story += [ArchitectureDiagram(), Spacer(1, 12), body('The website uses Oracle through the Express API. Browser code never connects directly to Oracle, and private database credentials remain server-side.') , PageBreak()]
     page(story, '1. Project map and system boundary', [
-        'The root README is the starting map. sql contains the Oracle scripts; docs contains written artefacts and PDF builders; web contains the optional Express demonstration.',
-        'The web path is Browser -> Express -> local JSON. The database path is SQLcl -> Oracle schema. They model similar concepts but do not exchange live records.'
-    ], ['AGENTS.md defines local rules: Oracle Free SQL only, fake data only, prescribed script names, documentation under docs, and no project-external changes.', 'The root .gitignore and web/.gitignore keep local stores and .env files out of Git.'], diagram=True)
+        'The root README is the starting map. sql contains the Oracle scripts; docs contains written artefacts and PDF builders; frontend and backend contain the Express application.',
+        'The web path is Browser -> Express -> Oracle. SQLcl is used to create and test the schema; the website uses the same schema through server-side Oracle queries.'
+    ], ['AGENTS.md defines local rules: Oracle Free SQL only, fake data only, prescribed script names, documentation under docs, and no project-external changes.', 'The root .gitignore and backend/.gitignore keep local stores and .env files out of Git.'], diagram=True)
     page(story, '2. Configuration and data safety', [
-        'web/.env.example names supported environment variables without providing credentials. package.json declares Express, dotenv, and node-oracledb for a future server-side integration. package-lock.json pins installed dependencies.',
-        'Ignored staff-accounts.json contains salts and password hashes. Ignored clinic-store.json contains demo mutations. They are private operational state, never source-controlled fixtures.'
-    ], ['Never commit passwords, invitation codes, Oracle connection strings, or local demo stores.', 'Use a disposable local store in tests and delete it only when intentionally resetting the demo.'])
+        'backend/.env.example names Oracle connection settings and invitation codes without providing credentials. package.json declares Express, dotenv, and node-oracledb. package-lock.json pins installed dependencies.',
+        'Oracle staff_accounts stores salts and password hashes. Local JSON records are retained as one-time migration input and backup, not live application storage.'
+    ], ['Never commit passwords, invitation codes, or Oracle connection strings.', 'Tests use unique database records and clean up their fixtures.'])
     page(story, '3. SQL run_all and safe teardown', [
         'sql/run_all.sql is the normal SQL entry point. Its WHENEVER SQLERROR directive exits on failure and rolls back the active transaction. SET DEFINE OFF stops substitution-variable surprises in sample literals.',
         'The ordered @@ calls reflect dependencies. sql/00_drop_all.sql uses a small PL/SQL helper to drop views, package, triggers, then child tables before parent tables. Expected missing-object errors are ignored; unexpected failures are raised.'
@@ -252,35 +252,35 @@ def build_developer_guide():
         'sql/08_tests.sql contains 22 numbered tests. Together with trigger demonstrations it produces 34 PASS messages in a successful full build. Tests cover constraints, package errors, audit, inventory lifecycle, payments, paid-line protection, date range inclusion, and retained history.'
     ], ['Every temporary SQL test change is rolled back.', 'Run the rebuild in a disposable schema during maintenance.'])
     page(story, '13. Express server entry file', [
-        'web/server.js imports Express and path, loads environment values, builds the app, enables JSON parsing, exposes static public files, and mounts auth before the protected API router.',
-        'The unknown /api handler returns JSON 404 before the HTML catch-all. The four-argument final middleware handles malformed JSON and unexpected errors. The require.main guard starts a listener only when launched directly, allowing tests to import the app.'
+        'backend/server.js imports Express and path, loads environment values, builds the app, enables JSON parsing, exposes frontend/public static files, and mounts auth before the protected API router.',
+        'The unknown /api handler returns JSON 404 before the HTML catch-all. The four-argument final middleware handles malformed JSON and unexpected errors. Direct startup verifies Oracle and opens the connection pool before listening; tests import the app without starting a listener.'
     ])
     page(story, '14. auth.js accounts and roster linking', [
-        'web/routes/auth.js imports crypto, file utilities, Express, and clinic persistence. Module constants name store paths, invitation-code settings, cookie lifetime, and scrypt settings.',
-        'ensureVeterinarianProfile links a veterinarian account to one roster profile by account ID, email, or controlled legacy-name matching. getVeterinarianRoster returns only account-backed doctors, so booking never presents a doctor who cannot sign in.'
-    ], ['persistAccounts writes temporary private JSON then renames it atomically.', 'publicAccount deliberately omits salt and password hash.'])
+        'backend/routes/auth.js validates role invitations, hashes passwords with scrypt, and stores account rows in Oracle. Veterinarian registration creates a linked veterinarian profile in the same transaction.',
+        'Login queries Oracle by normalized email and verifies the stored salt and hash. Public account objects deliberately omit password material.'
+    ], ['Session tokens are random HttpOnly cookies held in memory.', 'Database errors are surfaced through the API error middleware.'])
     page(story, '15. auth.js sessions, validation, and routes', [
         'setSession creates a random token, stores account ID and expiry in memory, and sends an HttpOnly SameSite cookie. getSessionAccount expires stale tokens. Rate limiting records attempts per IP and route during a 15-minute window.',
-        'Registration validates all inputs, verifies role-specific invitation codes, derives a salted scrypt hash, persists account and any new roster profile, and returns only public user data. Login hashes unknown users with a dummy salt to make the slow path similar.'
+        'Registration validates inputs and invitation codes, derives a salted scrypt hash, and inserts the account and veterinarian profile in one Oracle transaction. Login uses a dummy salt for unknown users to keep the expensive verification path similar.'
     ], ['requireAuth attaches a public account to the request.', 'requireRole is the reusable authorization guard for protected route actions.'])
     page(story, '16. api.js shared helpers and dashboard', [
-        'web/routes/api.js mounts requireAuth once for all following routes. Constants describe ISO shape, time shape, duration, active statuses, and field length limits.',
-        'isRealDate detects rollover values; isRealTime checks clock range and five-minute slots; isWithinClinicHours enforces Monday-Saturday and a full 30-minute fit. The dashboard scopes schedule data by role and roster before calculating metrics.'
+        'backend/routes/api.js mounts requireAuth once for all following routes. Constants describe ISO shape, time shape, duration, active statuses, and field length limits.',
+        'isRealDate detects rollover values; isRealTime checks clock range and five-minute slots; isWithinClinicHours enforces Monday-Saturday and a full 30-minute fit. The dashboard loads Oracle data through the repository and scopes schedules by role.'
     ])
     page(story, '17. api.js mutations and transitions', [
-        'Patient creation is admin-only, validates fields, appends in memory, saves, and removes the new row if saving fails. Appointment creation resolves a patient and linked doctor, validates date/time/reason, and rejects active 30-minute overlap for either doctor or patient.',
-        'Appointment PATCH enforces the state machine: only the assigned veterinarian may confirm pending work; an admin may cancel active work or complete eligible confirmed or legacy scheduled work after its time. Invoice PATCH is an intentionally simple admin-only mark-paid demo action.'
+        'Patient creation is admin-only and persists owner, species, breed and pet rows in a transaction. Appointment creation locks its veterinarian and patient, validates date/time/reason, and rejects active 30-minute overlaps.',
+        'Appointment PATCH enforces the state machine: only the assigned veterinarian may confirm pending work; an admin may cancel active work or complete eligible confirmed or legacy scheduled work after its time. Invoice PATCH records a payment for the outstanding balance.'
     ])
-    page(story, '18. clinic.js demo data and atomic store', [
-        'web/data/clinic.js exports local-date helpers, clinic facts, seeded arrays, and persistence. Local date components avoid UTC date shifts. Initial records use relative dates so the demo remains useful.',
-        'When a store exists, collection contents are replaced in place so imported modules retain stable array references. persistClinicData writes a random temporary file, renames it, then applies restrictive permission mode.'
-    ], ['This is not concurrent database storage.', 'A future Oracle integration belongs on the server and requires pooling, parameterized SQL, and mapping design.'])
+    page(story, '18. clinic.js source data and Oracle repository', [
+        'backend/data/clinic.js defines the fictional seed records consumed by the one-time importer and exports local-date helpers and clinic facts.',
+        'backend/repositories/clinic.js maps Oracle rows to the API response shape and uses bind variables for searches and writes. Mutations use Oracle transactions; the importer keeps source JSON files as backups.'
+    ], ['The web application does not fall back to JSON when Oracle is unavailable.', 'The importer records completion in backend_migrations and can safely report that an earlier migration already ran.'])
     page(story, '19. index.html markup contract', [
-        'web/public/index.html is the static application shell. It defines auth forms, sidebar, dashboard, tables, filters, dialogs, toast, and error regions. main.js depends on its IDs and classes.',
+        'frontend/public/index.html is the static application shell. It defines auth forms, sidebar, dashboard, tables, filters, dialogs, toast, and error regions. main.js depends on its IDs and classes.',
         'Use semantic form controls, native dialog elements, labels, and live text feedback. Role-specific elements start hidden but server-side checks still decide whether an action is allowed.'
     ])
     page(story, '20. main.js state and rendering blocks', [
-        'web/public/js/main.js begins with state and a request wrapper. request parses JSON, detects a protected-route 401, clears local user state, and creates a consistent error object. JSON helpers centralize POST and PATCH setup.',
+        'frontend/public/js/main.js begins with state and a request wrapper. request parses JSON, detects a protected-route 401, clears local user state, and creates a consistent error object. JSON helpers centralize POST and PATCH setup.',
         'escapeHtml protects values inserted into template strings. renderDashboard, renderPatients, renderAppointments, and renderInvoices transform loaded state into DOM content. Each renderer shows only role-appropriate actions and an empty state when needed.'
     ])
     page(story, '21. main.js forms, refresh, and events', [
@@ -288,12 +288,12 @@ def build_developer_guide():
         'loadClinicData uses Promise.all for independent reads. refreshData repeats it after mutations. A delegated click listener handles buttons created by later renders; direct listeners handle fixed forms, filters, search, logout, and dialog dismissals.'
     ])
     page(story, '22. styles.css visual and access blocks', [
-        'web/public/styles.css is organised from theme variables and base rules through shell layout, reusable components, tables/dialogs, and responsive media queries. Read top-down to find a selector’s inherited context.',
+        'frontend/public/styles.css is organised from theme variables and base rules through shell layout, reusable components, tables/dialogs, and responsive media queries. Read top-down to find a selector’s inherited context.',
         'The sidebar flex and sticky rules keep navigation usable. Content min-width prevents wide tables forcing page overflow. Table wrappers handle horizontal scrolling. Reduced-motion and transparency fallbacks preserve readable use on varied devices.'
     ], ['ARIA states, focus placement, and labels support keyboard and assistive technology.', 'CSS is presentation; it is not the authorization boundary.'])
     page(story, '23. Tests and DOM checker', [
-        'web/test/api.test.js starts the imported Express app on an ephemeral port with temporary local stores. It registers accounts, keeps cookie state, and verifies static delivery, authentication, role scope, booking, validation, transitions, invoices, persistence, unknown routes, and malformed JSON.',
-        'web/check_dom.js compares selector targets used by main.js with index.html. It catches missing IDs or classes after a markup edit. Run npm test and node check_dom.js from web before committing.'
+        'backend/test/api.test.js starts the imported Express app on an ephemeral port with temporary local stores. It registers accounts, keeps cookie state, and verifies static delivery, authentication, role scope, booking, validation, transitions, invoices, persistence, unknown routes, and malformed JSON.',
+        'frontend/check_dom.js compares selector targets used by main.js with index.html. It catches missing IDs or classes after a markup edit. Run npm test from backend and node frontend/check_dom.js from the project root before committing.'
     ])
     page(story, '24. Documentation and PDF files', [
         'docs/requirements.md is the project scope. design.md, erd.md, and normalization.md describe the relational model. decisions.md records intentional choices. checklist.md is completion evidence. backup.md describes safe database operations.',

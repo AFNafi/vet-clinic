@@ -4,15 +4,17 @@ A database system for a small veterinary clinic, built for Oracle Database Free 
 owners, pets, veterinarians, appointments, services, medications, prescriptions, vaccinations,
 invoices and payments, and demonstrates Oracle SQL, PL/SQL, security and testing.
 
-An optional Express demo dashboard lives in `web/` and uses a separate fictional local JSON
-store. The website does not currently connect to Oracle.
+The Express dashboard connects to Oracle for clinic records and staff accounts.
+It can import the existing fictional JSON demo data into the normalized Oracle
+tables without deleting the local files.
 
 ## What is in the project
 
 ```text
-sql/     Oracle scripts, run in numeric order by run_all.sql
-docs/    Requirements, design, ER diagram, normalization, decisions, backup notes
-web/     Optional Node/Express dashboard demo (fictional data only)
+sql/       Oracle scripts, run in numeric order by run_all.sql
+docs/      Requirements, design, ER diagram, guides and decisions
+frontend/  Browser HTML, CSS, JavaScript and markup checker
+backend/   Optional Node/Express server, API, demo data and tests
 ```
 
 The fourteen tables are `OWNERS`, `SPECIES`, `BREEDS`, `PETS`, `VETERINARIANS`, `APPOINTMENTS`,
@@ -24,7 +26,7 @@ The fourteen tables are `OWNERS`, `SPECIES`, `BREEDS`, `PETS`, `VETERINARIANS`, 
 
 - [User guide PDF](docs/user-guide.pdf) - website instructions for administrators and veterinarians.
 - [Technical handover PDF](docs/technical-handover.pdf) - project architecture, files, SQL,
-  web/API flow, tests and limitations (58 pages).
+  frontend/backend flow, tests and limitations.
 - Editable Markdown sources and the PDF builder are in `docs/`. Regenerate both PDFs on macOS
   with `node docs/build_pdf_guides.js`.
 
@@ -76,20 +78,32 @@ Role setup finished. receptionist=granted, vet=skipped, admin=granted.
 To obtain a real `vet` role, own the schema under a user name other than `VET` (for example
 `VETCLINIC`). `receptionist` and `admin` are unaffected.
 
-## Run the demo dashboard
+## Connect and run the dashboard
 
-The web app is a separate, optional deliverable. It serves fictional records from
-`web/data/clinic.js` through the API routes in `web/routes/api.js` and never connects to Oracle.
+The database schema must include the backend additions from `sql/09_backend.sql`.
+Fresh schemas get them from `sql/run_all.sql`; for an existing schema, connect with
+SQLcl as `VET` and run `@sql/09_backend.sql` from the project root. This extension
+is additive and safe to rerun.
 
 ```text
-cd web
+cd backend
 npm install
+npm run db:check
+npm run db:migrate
 npm run dev
 ```
 
-Open <http://localhost:3000>. Set `PORT` in an uncommitted `web/.env` to change the port; see
-`web/.env.example`. Keep any future Oracle credentials on the Express server, never in
-`web/public/`.
+Before the first run, copy `.env.example` to `.env` and privately set the Oracle
+connection values and role invitation codes. The application requires the
+database; it does not fall back to JSON storage. `db:migrate` imports the existing
+fictional clinic records and staff password hashes exactly once. It keeps the
+original JSON files as backup. Open <http://localhost:3000> after `npm run dev`.
+Keep database credentials and invitation codes on the server, never in
+`frontend/`.
+
+`npm run db:check` verifies the configured Oracle connection. The migration
+requires the original local demo records; run it before removing or moving those
+files. Set `PORT` in the private `.env` to use a different HTTP port.
 
 ## Sample data
 

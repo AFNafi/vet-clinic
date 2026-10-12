@@ -9,14 +9,15 @@ The website is a course demo, not a production medical-record or billing system.
 
 The app runs on the computer that starts the Node server. On that computer:
 
-1. Open Terminal and change to the project web folder: `cd /path/to/vet-clinic/web`.
-2. If this is the first run, install the JavaScript dependencies: `npm install`.
-3. Start the site: `npm start`. For automatic restarts during development, use `npm run dev`.
-4. Leave that terminal window running while using the website.
-5. Open `http://localhost:3000` in a browser on the same computer.
+1. Open Terminal and change to the project backend folder: `cd /path/to/vet-clinic/backend`.
+2. Ask the project administrator to confirm the Oracle database is available and configured.
+3. If this is the first run, install the JavaScript dependencies: `npm install`.
+4. Start the site: `npm start`. For automatic restarts during development, use `npm run dev`.
+5. Leave that terminal window running while using the website.
+6. Open `http://localhost:3000` in a browser on the same computer.
 
 The terminal prints a startup message when ready. `Ctrl+C` in that terminal stops the app. If
-port 3000 is occupied, set `PORT` in a private local `web/.env` file, then use that port in the
+port 3000 is occupied, set `PORT` in a private local `backend/.env` file, then use that port in the
 browser address. Do not put credentials in `.env` or share it.
 
 <!-- PAGE BREAK -->
@@ -200,13 +201,13 @@ worklist, with their date.
 
 # 13. Safe demo use and support
 
-This is a fictional local demonstration. It is not a production medical record, messaging system,
-or payment processor. Do not enter real client data, health information, passwords, or payment
+This is a fictional demonstration. It is not a production medical record, messaging system, or
+payment processor. Do not enter real client data, health information, passwords, or payment
 details. Do not treat the clinic card's phone or hours as real.
 
-The local web records persist in an ignored JSON data file on the server computer. They do not
-automatically sync between computers and do not write to the Oracle database scripts. Keep the
-computer's local files private and do not email them as part of the course handover.
+The web application reads and writes clinic records and staff accounts in its configured Oracle
+schema. The browser communicates only with Express. Keep the computer's private configuration
+secure; do not email it as part of the course handover.
 
 If a visit, patient, or invoice appears incorrect, do not edit data files manually. Record what
 you expected, what the site showed, and the account role you used; send that description to the

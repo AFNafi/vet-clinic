@@ -31,4 +31,7 @@ PROMPT === Creating roles and grants ===
 PROMPT === Running final tests ===
 @@08_tests.sql
 
+PROMPT === Creating backend account schema ===
+@@09_backend.sql
+
 PROMPT === Database rebuild and tests completed successfully ===

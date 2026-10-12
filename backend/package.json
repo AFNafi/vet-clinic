@@ -1,11 +1,13 @@
 {
-  "name": "web",
+  "name": "vet-clinic-backend",
   "version": "1.0.0",
   "description": "Simple veterinary clinic dashboard demo",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "db:check": "node scripts/check-database.js",
+    "db:migrate": "node scripts/migrate-json-to-oracle.js",
     "test": "node --test"
   },
   "keywords": [],

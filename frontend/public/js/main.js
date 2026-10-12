@@ -267,6 +267,11 @@ function setRegistrationRole(role) {
   const specialtyInput = specialty.querySelector('input');
   specialty.hidden = isAdmin;
   specialtyInput.required = !isAdmin;
+  for (const fieldId of ['license-field', 'phone-field']) {
+    const field = document.querySelector(`#${fieldId}`);
+    field.hidden = isAdmin;
+    field.querySelector('input').required = !isAdmin;
+  }
   const invitation = document.querySelector('#invitation-field');
   const invitationInput = invitation.querySelector('input');
   invitation.hidden = false;

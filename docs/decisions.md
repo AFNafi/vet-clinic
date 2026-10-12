@@ -1,5 +1,19 @@
 # Design Decisions
 
+## 2026-10-12: Separate frontend, backend and Oracle scripts
+
+Browser assets live in `frontend/`, the Express server, API, fictional data and tests live in
+`backend/`, and Oracle scripts remain in `sql/` to preserve the required SQL layout and root-run
+entry point. Express serves the static frontend from `frontend/public/`.
+
+## 2026-10-12: Use object format for Oracle query results
+
+The `node-oracledb` driver returns query rows as positional arrays by default (`OUT_FORMAT_ARRAY`).
+The application sets `oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT` globally in `backend/database.js`
+so queries consistently return rows as column-keyed objects (`row.COLUMN_NAME`). This ensures row
+mappings across auth, repositories, and migration correctly extract fields like password salts,
+patient names, and IDs without relying on fragile array indices.
+
 ## 2026-10-12: Retain appointments and audit only creations and changes
 
 Appointments are clinical history, so administrators do not receive `DELETE` permission for the
@@ -92,14 +106,14 @@ normally.
 
 ## 2026-10-06: Unknown API routes answer with JSON, not HTML
 
-The Express server ends with a catch-all that returns `public/index.html` for client-side routes.
+The Express server ends with a catch-all that returns `frontend/public/index.html` for client-side routes.
 Because it also matched unknown `/api/...` paths, an API mistake returned HTTP 200 with an HTML
 body, which hides client errors. A `/api` handler that returns `404` with `{"error":"Not found"}`
 now runs before the catch-all.
 
 ## 2026-10-06: Sidebar and content column flex fixes in the demo UI
 
-Two layout defects were fixed in `web/public/styles.css`:
+Two layout defects were fixed in `frontend/public/styles.css`:
 
 - `.sidebar` used `position: sticky` but the flex default `align-items: stretch` stretched it to
   the full page height, so sticky never engaged and the navigation scrolled out of view on long
@@ -160,8 +174,9 @@ directory is therefore filtered to account-backed profiles. When a veterinarian 
 server creates and saves their roster profile using the same email and a stable veterinarian ID;
 existing profiles are linked by email and older name-only profiles are matched by name. The
 dashboard count and visible schedule use the same linked roster. Patient, veterinarian,
-appointment, and invoice changes are persisted in the ignored local clinic store so a restart
-does not discard a booking. Dr. Maya Chen is retained as a veterinarian profile and account.
+appointment, and invoice changes were initially persisted in the ignored local clinic store.
+Dr. Maya Chen is retained as a veterinarian profile and account. The later Oracle integration
+decision below supersedes local JSON as the active backend store.
 
 ## 2026-10-11: Protect staff workflows with individual sign-in
 
@@ -175,6 +190,15 @@ hiding controls in the UI is not the security boundary. Sessions are in-memory a
 the demo server restarts. This avoids claiming production readiness without durable session
 storage, HTTPS deployment configuration, account recovery, and operational security review.
 
+## 2026-10-12: Connect the Express application to the normalized Oracle schema
+
+The Express API uses the existing normalized clinic tables instead of maintaining a parallel web
+database. A small additive SQL extension stores staff accounts and fields needed by the web app.
+The backend owns the Oracle connection pool, parameterized queries, and transaction boundaries;
+browser code never receives database credentials. A one-time transactional importer maps the
+fictional JSON demo data to Oracle and keeps the source files as a backup. Startup fails clearly
+when Oracle is unavailable rather than silently falling back to local files.
+
 ## 2026-10-06: Booking dates and times are validated as real calendar values
 
 A regular expression only checks shape, so `2026-13-45` and `25:99` passed the first version of
@@ -183,9 +207,10 @@ read-back components (rejecting month 13, day 45, and Feb 29 in non-leap years),
 hour and minute are 0-23 and 0-59. The comparison deliberately avoids `toISOString()` because
 local midnight can fall on a different UTC day, which would reject valid dates.
 
-## 2026-10-06: The front end is an ES module at public/js/main.js
+## 2026-10-06: The front end is an ES module at frontend/public/js/main.js
 
-`index.html` loads `<script type="module" src="js/main.js">`, so the old non-module `public/app.js`
-was replaced by `public/js/main.js`, which wires all four views including the booking dialog and
-the billing table that the old script never rendered. `web/check_dom.js` verifies that every id
-and class the script queries still exists in the markup.
+`index.html` loads `<script type="module" src="js/main.js">`, so the old non-module
+`frontend/public/app.js` was replaced by `frontend/public/js/main.js`, which wires all four views,
+including the booking dialog and the billing table that the old script never rendered.
+`frontend/check_dom.js` verifies that every id and class the script queries still exists in the
+markup.

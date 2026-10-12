@@ -1,14 +1,11 @@
 const express = require('express');
 const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
+const oracledb = require('oracledb');
 const { promisify } = require('node:util');
-const { veterinarians, persistClinicData } = require('../data/clinic');
+const { getConnection } = require('../database');
 
 const router = express.Router();
 const scrypt = promisify(crypto.scrypt);
-const accountsPath = process.env.AUTH_STORE_PATH ||
-  path.join(__dirname, '..', 'data', 'staff-accounts.json');
 const adminRegistrationCode = process.env.ADMIN_REGISTRATION_CODE || '';
 const veterinarianRegistrationCode = process.env.VETERINARIAN_REGISTRATION_CODE || '';
 const SESSION_COOKIE = 'vetwise_session';
@@ -19,89 +16,8 @@ const DUMMY_SALT = Buffer.alloc(16, 83);
 const adminRegistrationEnabled = Buffer.byteLength(adminRegistrationCode, 'utf8') >= 16;
 const veterinarianRegistrationEnabled =
   Buffer.byteLength(veterinarianRegistrationCode, 'utf8') >= 16;
-
-let accounts = fs.existsSync(accountsPath)
-  ? JSON.parse(fs.readFileSync(accountsPath, 'utf8'))
-  : [];
 const sessions = new Map();
 const authAttempts = new Map();
-
-function canonicalName(name) {
-  return String(name).replace(/^Dr\.?\s+/i, '').trim().toLowerCase();
-}
-
-function nextVeterinarianId() {
-  return veterinarians.reduce((highest, item) => Math.max(highest, item.id), 0) + 1;
-}
-
-function ensureVeterinarianProfile(account) {
-  if (account.role !== 'veterinarian') return { profile: null, created: false, changed: false };
-
-  const email = account.email.toLowerCase();
-  let profile = veterinarians.find((item) =>
-    item.accountId === account.id || item.email?.toLowerCase() === email);
-  if (!profile) {
-    profile = veterinarians.find((item) =>
-      !item.email && canonicalName(item.name) === canonicalName(account.name));
-  }
-
-  let changed = false;
-  let created = false;
-  if (!profile) {
-    const id = Number.isInteger(account.veterinarianId) &&
-      !veterinarians.some((item) => item.id === account.veterinarianId)
-      ? account.veterinarianId
-      : nextVeterinarianId();
-    profile = {
-      id,
-      name: /^Dr\.?\s/i.test(account.name) ? account.name : `Dr. ${account.name}`,
-      email,
-      specialty: account.specialty ||
-        account.title.split('·')[1]?.trim() ||
-        'General Practice',
-      accountId: account.id
-    };
-    veterinarians.push(profile);
-    created = true;
-    changed = true;
-  } else {
-    if (!profile.email) {
-      profile.email = email;
-      changed = true;
-    }
-    if (profile.accountId !== account.id) {
-      profile.accountId = account.id;
-      changed = true;
-    }
-  }
-
-  if (account.veterinarianId !== profile.id) {
-    account.veterinarianId = profile.id;
-    changed = true;
-  }
-  return { profile, created, changed };
-}
-
-function getVeterinarianRoster() {
-  const veterinarianAccounts = accounts.filter((account) => account.role === 'veterinarian');
-  return veterinarians
-    .filter((profile) => veterinarianAccounts.some((account) =>
-      profile.accountId === account.id ||
-      profile.email?.toLowerCase() === account.email.toLowerCase() ||
-      (account.veterinarianId === profile.id &&
-        canonicalName(profile.name) === canonicalName(account.name))))
-    .map(({ id, name, email, specialty }) => ({ id, name, email, specialty }));
-}
-
-let rosterChanged = false;
-for (const account of accounts) {
-  const { changed } = ensureVeterinarianProfile(account);
-  rosterChanged ||= changed;
-}
-if (rosterChanged) {
-  persistClinicData();
-  persistAccounts();
-}
 
 function safeEqual(first, second) {
   const firstBytes = Buffer.from(first);
@@ -122,12 +38,18 @@ function publicAccount(account) {
   };
 }
 
-function persistAccounts() {
-  fs.mkdirSync(path.dirname(accountsPath), { recursive: true });
-  const temporaryPath = `${accountsPath}.${crypto.randomUUID()}.tmp`;
-  fs.writeFileSync(temporaryPath, JSON.stringify(accounts, null, 2), { mode: 0o600 });
-  fs.renameSync(temporaryPath, accountsPath);
-  fs.chmodSync(accountsPath, 0o600);
+function accountFromRow(row) {
+  return {
+    id: row.ACCOUNT_ID,
+    email: row.EMAIL,
+    name: row.FULL_NAME,
+    title: row.TITLE,
+    role: row.ACCOUNT_ROLE.toLowerCase(),
+    initials: row.INITIALS,
+    salt: row.PASSWORD_SALT,
+    passwordHash: row.PASSWORD_HASH,
+    ...(row.VETERINARIAN_ID === null ? {} : { veterinarianId: row.VETERINARIAN_ID })
+  };
 }
 
 function readCookie(request, cookieName) {
@@ -141,7 +63,7 @@ function readCookie(request, cookieName) {
 function setSession(account, response) {
   const token = crypto.randomBytes(32).toString('base64url');
   const expiresAt = Date.now() + SESSION_DURATION_MS;
-  sessions.set(token, { accountId: account.id, expiresAt });
+  sessions.set(token, { account: publicAccount(account), expiresAt });
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   response.setHeader('Set-Cookie',
     `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DURATION_MS / 1000}${secure}`);
@@ -155,8 +77,7 @@ function getSessionAccount(request) {
     sessions.delete(token);
     return null;
   }
-  const account = accounts.find((item) => item.id === session.accountId);
-  return account || null;
+  return session.account;
 }
 
 function rateLimit(request, response, next) {
@@ -182,6 +103,13 @@ function initialsFor(name) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0].toUpperCase()).join('');
 }
 
+function splitVeterinarianName(name) {
+  const cleaned = name.replace(/^Dr\.?\s+/i, '').trim();
+  const parts = cleaned.split(/\s+/);
+  if (parts.length < 2) return null;
+  return [parts.slice(0, -1).join(' '), parts.at(-1)];
+}
+
 router.get('/options', (request, response) => {
   response.json({ adminRegistrationEnabled, veterinarianRegistrationEnabled });
 });
@@ -192,7 +120,7 @@ router.get('/me', (request, response) => {
     response.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
     return response.json({ user: null });
   }
-  return response.json({ user: publicAccount(account) });
+  return response.json({ user: account });
 });
 
 router.post('/register', rateLimit, async (request, response) => {
@@ -202,6 +130,9 @@ router.post('/register', rateLimit, async (request, response) => {
   const password = String(body.password || '');
   const role = String(body.role || '').trim().toLowerCase();
   const specialty = String(body.specialty || '').trim();
+  const licenseNumber = String(body.licenseNumber || '').trim();
+  const phone = String(body.phone || '').trim();
+  const veterinarianNameParts = role === 'veterinarian' ? splitVeterinarianName(name) : null;
   const errors = [];
 
   if (!name || name.length > 80) errors.push('Enter a name of 1 to 80 characters.');
@@ -210,8 +141,19 @@ router.post('/register', rateLimit, async (request, response) => {
     errors.push('Choose a password with at least 12 characters and no more than 128 bytes.');
   }
   if (!['admin', 'veterinarian'].includes(role)) errors.push('Choose administrator or veterinarian.');
-  if (role === 'veterinarian' && (!specialty || specialty.length > 60)) {
-    errors.push('Enter a veterinarian specialty of 1 to 60 characters.');
+  if (role === 'veterinarian') {
+    if (!specialty || specialty.length > 60) {
+      errors.push('Enter a veterinarian specialty of 1 to 60 characters.');
+    }
+    if (!veterinarianNameParts ||
+        veterinarianNameParts.some((part) => part.length > 50)) {
+      errors.push('Enter a veterinarian first and last name of 50 characters or fewer.');
+    }
+    if (!licenseNumber || licenseNumber.length > 50) {
+      errors.push('Enter a license number of 1 to 50 characters.');
+    }
+    if (!phone || phone.length > 30) errors.push('Enter a work phone number of 1 to 30 characters.');
+    if (email.length > 100) errors.push('A veterinarian email address must be 100 characters or fewer.');
   }
   if (role === 'admin') {
     const submittedCode = String(body.invitationCode || '');
@@ -227,16 +169,9 @@ router.post('/register', rateLimit, async (request, response) => {
     }
   }
   if (errors.length) return response.status(400).json({ errors });
-  if (accounts.some((account) => account.email === email)) {
-    return response.status(409).json({ errors: ['An account with that email already exists.'] });
-  }
 
   const salt = crypto.randomBytes(16);
   const passwordHash = await scrypt(password, salt, PASSWORD_BYTES, SCRYPT_OPTIONS);
-  if (accounts.some((account) => account.email === email)) {
-    return response.status(409).json({ errors: ['An account with that email already exists.'] });
-  }
-
   const account = {
     id: crypto.randomUUID(),
     email,
@@ -244,28 +179,71 @@ router.post('/register', rateLimit, async (request, response) => {
     title: role === 'admin' ? 'Clinic administrator' : `Veterinarian · ${specialty}`,
     role,
     initials: initialsFor(name),
-    ...(role === 'veterinarian' ? { specialty } : {}),
     salt: salt.toString('base64url'),
     passwordHash: passwordHash.toString('base64url')
   };
-  accounts.push(account);
-  const veterinarianProfile = ensureVeterinarianProfile(account);
+  const connection = await getConnection();
   try {
-    if (veterinarianProfile.profile) persistClinicData();
-    persistAccounts();
-  } catch (error) {
-    accounts = accounts.filter((item) => item.id !== account.id);
-    if (veterinarianProfile.created) {
-      veterinarians.splice(veterinarians.indexOf(veterinarianProfile.profile), 1);
-      try {
-        persistClinicData();
-        persistAccounts();
-      } catch (rollbackError) {
-        error.rollbackError = rollbackError;
+    let veterinarianId = null;
+    if (role === 'veterinarian') {
+      const [firstName, lastName] = veterinarianNameParts;
+      const veterinarianResult = await connection.execute(
+        `INSERT INTO veterinarians (
+             first_name, last_name, license_number, phone, email, specialty
+         )
+         VALUES (
+             :first_name, :last_name, :license_number, :phone, :email, :specialty
+         )
+         RETURNING veterinarian_id INTO :veterinarian_id`,
+        {
+          first_name: firstName,
+          last_name: lastName,
+          license_number: licenseNumber,
+          phone,
+          email,
+          specialty,
+          veterinarian_id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+        }
+      );
+      veterinarianId = veterinarianResult.outBinds.veterinarian_id[0];
+      account.veterinarianId = veterinarianId;
+    }
+
+    await connection.execute(
+      `INSERT INTO staff_accounts (
+           account_id, email, full_name, title, account_role, initials,
+           password_salt, password_hash, specialty, veterinarian_id
+       )
+       VALUES (
+           :account_id, :email, :full_name, :title, :account_role, :initials,
+           :password_salt, :password_hash, :specialty, :veterinarian_id
+       )`,
+      {
+        account_id: account.id,
+        email: account.email,
+        full_name: account.name,
+        title: account.title,
+        account_role: account.role.toUpperCase(),
+        initials: account.initials,
+        password_salt: account.salt,
+        password_hash: account.passwordHash,
+        specialty: role === 'veterinarian' ? specialty : null,
+        veterinarian_id: veterinarianId
       }
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    if (error.errorNum === 1) {
+      return response.status(409).json({
+        errors: ['An account with that email or license number already exists.']
+      });
     }
     throw error;
+  } finally {
+    await connection.close();
   }
+
   setSession(account, response);
   return response.status(201).json({ user: publicAccount(account) });
 });
@@ -276,15 +254,36 @@ router.post('/login', rateLimit, async (request, response) => {
   if (Buffer.byteLength(password, 'utf8') > 128) {
     return response.status(401).json({ errors: ['Email or password is incorrect.'] });
   }
-  const account = accounts.find((item) => item.email === email);
-  const salt = account ? Buffer.from(account.salt, 'base64url') : DUMMY_SALT;
+  const connection = await getConnection();
+  let result;
+  try {
+    result = await connection.execute(
+      `SELECT account_id,
+              email,
+              full_name,
+              title,
+              account_role,
+              initials,
+              password_salt,
+              password_hash,
+              veterinarian_id
+       FROM staff_accounts
+       WHERE email = :email`,
+      { email }
+    );
+  } finally {
+    await connection.close();
+  }
+  const accountRow = result.rows[0];
+  const salt = accountRow ? Buffer.from(accountRow.PASSWORD_SALT, 'base64url') : DUMMY_SALT;
   const hash = await scrypt(password, salt, PASSWORD_BYTES, SCRYPT_OPTIONS);
-  const passwordMatches = account
-    ? safeEqual(hash, Buffer.from(account.passwordHash, 'base64url'))
+  const passwordMatches = accountRow
+    ? safeEqual(hash, Buffer.from(accountRow.PASSWORD_HASH, 'base64url'))
     : false;
-  if (!account || !passwordMatches) {
+  if (!accountRow || !passwordMatches) {
     return response.status(401).json({ errors: ['Email or password is incorrect.'] });
   }
+  const account = accountFromRow(accountRow);
   setSession(account, response);
   return response.json({ user: publicAccount(account) });
 });
@@ -298,7 +297,7 @@ router.post('/logout', (request, response) => {
 function requireAuth(request, response, next) {
   const account = getSessionAccount(request);
   if (!account) return response.status(401).json({ errors: ['Sign in to continue.'] });
-  request.user = publicAccount(account);
+  request.user = account;
   return next();
 }
 
@@ -311,4 +310,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { router, requireAuth, requireRole, getVeterinarianRoster };
+module.exports = { router, requireAuth, requireRole };

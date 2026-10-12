@@ -37,6 +37,8 @@ BEGIN
     -- Drop child tables before parent tables to preserve referential integrity.
     drop_if_exists('DROP TABLE payments CASCADE CONSTRAINTS PURGE');
     drop_if_exists('DROP TABLE invoices CASCADE CONSTRAINTS PURGE');
+    drop_if_exists('DROP TABLE staff_accounts CASCADE CONSTRAINTS PURGE');
+    drop_if_exists('DROP TABLE backend_migrations CASCADE CONSTRAINTS PURGE');
     drop_if_exists('DROP TABLE appointment_audit CASCADE CONSTRAINTS PURGE');
     drop_if_exists('DROP TABLE prescriptions CASCADE CONSTRAINTS PURGE');
     drop_if_exists('DROP TABLE appointment_services CASCADE CONSTRAINTS PURGE');

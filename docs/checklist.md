@@ -201,5 +201,5 @@ Use this checklist to track every project deliverable and grading criterion.
 - **Which report outputs are expected beyond the query script and views?**
   None; `sql/03_queries.sql` (18 queries) and the four views are the required reports.
 - **Is the Node.js/Express front end expected?**
-  It is optional. The shipped `web/` demo runs on fictional in-memory data and never connects to
-  Oracle; any future credentials stay on the Express server only.
+  It is an optional companion application. The shipped `frontend/` and `backend/` connect to the
+  Oracle schema through Express; database credentials remain on the server.
